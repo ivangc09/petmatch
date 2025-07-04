@@ -85,11 +85,19 @@ export default function VeterinarioDashboard() {
                 ))}
             </ul>
         )}
+
+        <button className='bg-blue text-white p-2 mt-2 rounded'>
+            <Link href="/mascotas/mis-solicitudes" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4">
+                Ver Mis Solicitudes de Adopción
+            </Link>
+        </button>
+
         <button className='bg-blue text-white p-2 mt-2 rounded'>
                 <Link href="/mi-perfil" className="text-white">
                     Mi Perfil
                 </Link>
-            </button>
+        </button>
+
         <button onClick={hangleLogout} style={{ padding: '10px 20px', backgroundColor: '#f00', color: '#fff', border: 'none', borderRadius: '5px' }}>
                 Cerrar sesión
         </button>
