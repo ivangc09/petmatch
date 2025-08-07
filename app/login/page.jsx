@@ -35,37 +35,45 @@ export default function LoginPage() {
     };
 
     return (
-        <div style={{ maxWidth: 400, margin: "0 auto" }}>
-            <h2>Iniciar sesión</h2>
+            <div className="shadow-lg flex flex-col md:flex-row w-full h-screen overflow-hidden font-['Poppins']">
+                <div className="md:w-2/3 hidden md:block">
+                    <img src="/login-fondo.webp" alt="Adopta una mascota" loading="lazy" className="h-full w-full object-cover"/>
+                </div>
 
-            <form onSubmit={handleLogin}>
-                <input
-                    type="text"
-                    placeholder="Nombre de usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    style={{ display: "block", width: "100%", marginBottom: 10 }}
-                />
-                <input
-                    type="password"
-                    placeholder="Contraseña"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    style={{ display: "block", width: "100%", marginBottom: 10 }}
-                />
-                <button type="submit" style={{ width: "100%" }}>
-                    Iniciar sesión
-                </button>
-            </form>
+                <div className="bg-[#faf6f3] md:w-1/3 p-10 flex flex-col justify-center">
+                    <h1 className="text-5xl font-bold text-[#2C2C2C] mb-2 font-['Dancing_Script'] text-center">PetMatch</h1>
+                    <p className="text-[#555] mb-6 text-center font-['Poppins']">El lugar para conocer a tu nuevo amigo</p>
 
-            <hr style={{ margin: "20px 0" }} />
+                    <form onSubmit={handleLogin} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[#2C2C2C]">Nombre de usuario</label>
+                            <input type="username" placeholder="Usuario"
+                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D3764C]"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required/>
+                        </div>
 
-            <p>¿Aún no tienes cuenta?</p>
-            <Link href="/signup" style={{ color: "blue", textDecoration: "underline" }}>
-                Crear Cuenta
-            </Link>
-        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-[#2C2C2C]">Contraseña</label>
+                            <input type="password" placeholder="Contraseña"
+                                    className="w-full mt-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D3764C]"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required/>
+                        </div>
+
+                        <button type="submit"
+                            className="w-full bg-[#D3764C] hover:bg-[#C1643E] text-white font-semibold py-2 rounded-md transition duration-300">
+                                Iniciar sesión
+                        </button>
+
+                        <p className="text-sm text-center mt-4 text-[#555]">
+                            ¿Aún no tienes cuenta?
+                            <Link href="/signup" className="text-[#D3764C] font-medium hover:underline"> Crear cuenta</Link>
+                        </p>
+                    </form>
+                </div>
+            </div>
     );
 }
