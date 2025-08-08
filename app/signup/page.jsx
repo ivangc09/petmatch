@@ -110,7 +110,7 @@ export default function RegistroPage() {
                 <Link href="/login" className="text-[#D3764C] font-medium"> iniciar sesión</Link>
             </button>
 
-            {registroExitoso && <p style={{ color: "green" }}>Registro exitoso ✅</p>}
+            {registroExitoso && <p style={{ color: "green" }}>Registro exitoso </p>}
             {error && <p style={{ color: "red" }}>Error: {JSON.stringify(error)}</p>}
             </div>
 

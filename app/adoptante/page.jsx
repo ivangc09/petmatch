@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import DetallesMascota from '@/components/DetallesMascota';
 import Comentarios from '@/components/Comentarios';
+import AdoptanteHeader from '@/components/AdoptanteHeader';
+import Hero from '@/components/Hero';
 
 export default function AdoptanteDashboard() {
     const router = useRouter();
@@ -39,9 +41,9 @@ export default function AdoptanteDashboard() {
 
     return (
         <main>
-            <h1>🐶 Bienvenido Adoptante</h1>
-            <p>Aquí puedes buscar mascotas para adoptar.</p>
+            <AdoptanteHeader />
 
+            <Hero />
             <div>
                 <h2>Mascotas Disponibles para Adopción</h2>
                 <ul>
@@ -73,18 +75,6 @@ export default function AdoptanteDashboard() {
                 </Link>
             </button>
 
-            <button
-                onClick={handleLogout}
-                style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#f00',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '5px',
-                }}
-            >
-                Cerrar sesión
-            </button>
         </main>
     );
 }

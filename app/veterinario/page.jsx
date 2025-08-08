@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Header from '../../components/VeterinarioHeader';
 
 export default function VeterinarioDashboard() {
     const router = useRouter();
@@ -40,15 +41,14 @@ export default function VeterinarioDashboard() {
     fetchMascotas();
     }, []);
 
-    const hangleLogout = () => {
-        localStorage.removeItem('user');
-        router.push('/login');
-    }
-
     // ! Crear nuevos componentes proximamente
 
     return (
-        <div className="p-4">
+        <div>
+            <Header />
+
+            <div className="p-4">
+
             <h1 className="text-2xl font-bold mb-4">Panel del Veterinario</h1>
 
             <button
@@ -85,22 +85,9 @@ export default function VeterinarioDashboard() {
                 ))}
             </ul>
         )}
-
-        <button className='bg-blue text-white p-2 mt-2 rounded'>
-            <Link href="/mascotas/mis-solicitudes" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-4">
-                Ver Mis Solicitudes de Adopción
-            </Link>
-        </button>
-
-        <button className='bg-blue text-white p-2 mt-2 rounded'>
-                <Link href="/mi-perfil" className="text-white">
-                    Mi Perfil
-                </Link>
-        </button>
-
-        <button onClick={hangleLogout} style={{ padding: '10px 20px', backgroundColor: '#f00', color: '#fff', border: 'none', borderRadius: '5px' }}>
-                Cerrar sesión
-        </button>
         </div>
+
+        </div>
+        
     );
 }
