@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import VeterinarioHeader from "@/components/VeterinarioHeader";
 
 export default function NuevaMascotaForm({
     formData,
@@ -16,7 +17,9 @@ export default function NuevaMascotaForm({
     }
 
     return (
-        <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md mt-10 font-['Poppins']">
+        <div>
+            <VeterinarioHeader />
+            <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md mt-10 font-['Poppins']">
             <h2 className="text-2xl font-bold text-[#D3764C] mb-4">
                 Registrar nueva mascota
             </h2>
@@ -156,5 +159,7 @@ export default function NuevaMascotaForm({
                 {error && <p className="text-red-500">{error}</p>}
             </form>
         </div>
+        </div>
+        
     );
 }

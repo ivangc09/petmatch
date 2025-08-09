@@ -15,6 +15,9 @@ export default function VeterinarioHeader() {
 
             <div className='font-["Poppins"] ml-auto flex items-center gap-4'>
                 <FaBell size={24} className="text-[#7d8181] hover:text-[#D3764C] cursor-pointer" />
+                <Link href="/veterinario" className="text-[#7d8181] hover:text-[#D3764C]">
+                    Inicio
+                </Link>
                 <Link href="/mascotas/nueva" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">
                     Nueva Mascota
                 </Link>

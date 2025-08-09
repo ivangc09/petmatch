@@ -14,6 +14,9 @@ export default function AdoptanteHeader() {
 
             <div className='font-["Poppins"] ml-auto flex items-center gap-4'>
                 <FaBell size={24} className="text-[#7d8181] hover:text-[#D3764C] cursor-pointer" />
+                <Link href="/adoptante" className="text-[#7d8181] hover:text-[#D3764C]">
+                    Inicio
+                </Link>
                 <Link href="" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">
                     Encontrar mascotas
                 </Link>
