@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../../components/VeterinarioHeader';
+import PetCard from '../../components/PetCard';
 
 export default function VeterinarioDashboard() {
     const router = useRouter();
@@ -41,13 +42,11 @@ export default function VeterinarioDashboard() {
     fetchMascotas();
     }, []);
 
-    // ! Crear nuevos componentes proximamente
-
     return (
         <div>
             <Header />
 
-            <div className="p-4">
+            <div className="">
 
             <h1 className="text-2xl font-bold mb-4">Panel del Veterinario</h1>
 
@@ -63,27 +62,15 @@ export default function VeterinarioDashboard() {
                 {mascotas.length === 0 ? (
                 <p>No has registrado mascotas aún.</p>
             ) : (
-            <ul className="space-y-4">
+            <div className='flex gap-4 justify-center flex-wrap bg-[#f6f5f3]'>
                 {mascotas.map((mascota) => (
-                <li key={mascota.id} className="border p-4 rounded shadow">
-                    <h3 className="text-lg font-semibold">{mascota.nombre}</h3>
-                    <p>Especie: {mascota.especie}</p>
-                    <p>Raza: {mascota.raza}</p>
-                    <p>Edad: {mascota.edad} años</p>
-                    <p>Tamaño: {mascota.tamaño}</p>
-                    <p>Sexo: {mascota.sexo}</p>
-                    <p>Descripción: {mascota.descripcion}</p>
-                    {mascota.fotos && (
-                        <img
-                        src={mascota.fotos}
-                        alt={mascota.nombre}
-                        className="mt-2 w-48 h-48 object-cover rounded"
-                        />
-                    )}
-                </li>
+                <div key={mascota.id} className="p-6 mb-4 max-w-md">
+                    <PetCard mascota={mascota} tipoUsuario={tipoUsuario} />
+                    
+                </div>
                 
                 ))}
-            </ul>
+            </div>
         )}
         </div>
 
