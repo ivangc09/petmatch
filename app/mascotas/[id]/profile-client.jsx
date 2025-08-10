@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import AdoptanteHeader from "@/components/AdoptanteHeader";
 import Comentarios from "@/components/Comentarios";
+import Chatbot from "@/components/Chatbot";
 
 export default function PetProfile({ mascota }) {
   const {
@@ -110,6 +111,7 @@ export default function PetProfile({ mascota }) {
             </div>
           </aside>
         </div>
+        <Chatbot />
       </div>
     </div>
     </div>

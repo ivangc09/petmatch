@@ -6,6 +6,7 @@ import AdoptanteHeader from '@/components/AdoptanteHeader';
 import Hero from '@/components/Hero';
 import PetCard from '@/components/PetCard';
 import SeccionMedia from '@/components/SeccionMedia';
+import Chatbot from '@/components/Chatbot';
 
 export default function AdoptanteDashboard() {
     const router = useRouter();
@@ -50,6 +51,8 @@ export default function AdoptanteDashboard() {
                     ))}
                 
             </div>
+            <Chatbot />
+
 
         </main>
     );

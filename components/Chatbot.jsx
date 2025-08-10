@@ -1,82 +1,74 @@
-"use client"
+import { useState } from "react";
+import ChatWidget from "@/components/ChatWidget";
 
-import { useState } from "react"
+export default function Page() {
+  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState([]);
 
-export default function Chatbot(){
-    const [mensaje, setMensaje] = useState("");
-    const [historial, setHistorial] = useState([]);
-    const [cargando, setCargando] = useState(false);
+  async function sendMsg(msg) {
+    // Agregar mensaje del usuario
+    setMessages((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), role: "user", text: msg, ts: Date.now() },
+    ]);
+    setLoading(true);
 
-    const enviarPregunta =  async () =>{
-        if (!mensaje.trim()) return;
-
-        const preguntaUsuario = mensaje;
-        setHistorial([...historial,{autor:"Usuario", mensaje: preguntaUsuario}]);
-        setMensaje("");
-        setCargando(true);
-
-        // !Cambiar la ruta a la API real
-        try{
-            const response = await fetch("ruta-a-la-api",{
-                method: "POST",
-                headers:{
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ pregunta: preguntaUsuario })
-            });
-
-            const data = await response.json();
-            const respuesta = data.respuesta || "Lo siento, no tengo una respuesta para eso.";
-
-            setHistorial((prev) => [
-                ...prev,
-                { autor : "Bot", mensaje: respuesta }
-            ]);
+    try {
+      const res = await fetch(
+        "https://chatbot-production-38c5.up.railway.app/api/chatbot/",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }, // ← importante
+          body: JSON.stringify({ mensaje: msg }), // ← aquí el campo correcto
         }
-        catch(error){
-            setHistorial((prev) => [
-                ...prev,
-                { autor: "Bot", mensaje: "Error al obtener respuesta del bot." }
-            ]);
-        }
-        finally{
-            setCargando(false);
-        }
-    };
+      );
 
-    // * HTML provsional para el chatbot
+      const data = await res.json();
+      console.log("API data:", data);
 
-    return(
-        <div className="max-w-xl mx-auto p-4">
-            <h2 className="text-xl font-bold mb-4">Chatbot de Mascotas</h2>
+      // Resolver texto de la respuesta
+      let botText = "";
+      if (typeof data?.respuesta === "string") {
+        botText = data.respuesta;
+      } else if (Array.isArray(data?.respuestas)) {
+        botText =
+          data.respuestas[0]?.respuesta ||
+          data.respuestas[0] ||
+          "No encontré respuesta.";
+      } else {
+        botText =
+          data?.answer ||
+          data?.message ||
+          "No pude entender la respuesta del servidor.";
+      }
 
-            <div className="bg-gray-100 p-4 rounded h-80 overflow-y-auto mb-4">
-                {historial.map((msg, index) => (
-                    <div key={index} className={`mb-2 ${msg.autor === 'usuario' ? 'text-right' : 'text-left'}`}>
-                        <span className={`inline-block px-3 py-2 rounded-lg ${msg.autor === 'usuario' ? 'bg-blue-500 text-white' : 'bg-white text-black border'}`}>
-                            {msg.texto}
-                        </span>
-                    </div>
-                ))}
-                {cargando && <p className="text-sm text-gray-500">Pensando...</p>}
-            </div>
+      // Agregar mensaje del bot
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "bot", text: botText, ts: Date.now() },
+      ]);
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: "bot",
+          text: "Error al conectar con el servidor.",
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-            <div className="flex gap-2">
-                <input
-                    type="text"
-                    className="flex-1 p-2 border rounded"
-                    placeholder="Escribe tu pregunta..."
-                    value={mensaje}
-                    onChange={(e) => setMensaje(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && enviarPregunta()}
-                />
-                <button
-                    onClick={enviarPregunta}
-                    className="bg-green-600 text-white px-4 py-2 rounded"
-                >
-                    Enviar
-                </button>
-            </div>
-        </div>
-    );
+  return (
+    <ChatWidget
+      brand="PawBot"
+      subtitle="Asistente"
+      loading={loading}
+      messages={messages}
+      onSend={sendMsg}
+    />
+  );
 }
