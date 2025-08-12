@@ -1,91 +1,88 @@
+// app/.../perfil/page.jsx
 "use client";
-
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRef, useState } from "react";
+import { useProfile } from "@/hooks/useProfile";
+import PerfilView from "@/components/PerfilView";
+import { apiFetch } from "@/lib/apiClient";
 
 export default function PerfilPage() {
-    const [perfil, setPerfil] = useState(null);
-    const [formData, setFormData] = useState({ username: "" });
-    const [editMode, setEditMode] = useState(false);
-    const [mensaje, setMensaje] = useState("");
+  const { perfil, loading, mensaje, setMensaje, saving, uploading, saveProfile, saveAvatar } = useProfile();
+  const [editMode, setEditMode] = useState(false);
+  const [formData, setFormData] = useState({ username: "", ciudad: "", telefono: "" });
 
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        fetch("http://localhost:8000/api/auth/mi-perfil/", {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                setPerfil(data);
-                setFormData({ username: data.username });
-            });
-    }, []);
+  const fileInputRef = useRef(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
 
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
+  if (loading) return <p className="p-6">Cargando perfil...</p>;
+  if (!perfil) return <p className="p-6">No hay perfil</p>;
 
-    const handleSubmit = async () => {
-        const token = localStorage.getItem("token");
-        try {
-            const res = await fetch("http://localhost:8000/api/auth/mi-perfil/", {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(formData),
-            });
+  // sync form cuando cargue perfil (simplo)
+  if (!formData.username && perfil?.username) {
+    setFormData({ username: perfil.username, ciudad: perfil.ciudad || "", telefono: perfil.telefono || "" });
+  }
 
-            if (res.ok) {
-                const data = await res.json();
-                setPerfil(data);
-                setEditMode(false);
-                setMensaje("Perfil actualizado correctamente");
-            } else {
-                setMensaje("Error al actualizar perfil");
-            }
-        } catch {
-            setMensaje("Error de red");
-        }
-    };
+  const onChange = (e) => setFormData((p) => ({ ...p, [e.target.name]: e.target.value }));
+  const onSubmit = async (e) => { e.preventDefault(); await saveProfile(formData); setEditMode(false); };
 
-    if (!perfil) return <p>Cargando perfil...</p>;
+  const onOpenFile = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith("image/")) return setMensaje("Selecciona una imagen válida");
+    if (f.size > 5 * 1024 * 1024) return setMensaje("La imagen es muy grande (máx 5MB)");
+    setMensaje("");
+    setAvatarFile(f);
+    setAvatarPreview(URL.createObjectURL(f));
+  };
+  const onUploadAvatar = async () => {
+    if (!avatarFile) return;
+    await saveAvatar(avatarFile);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(null); setAvatarFile(null);
+  };
+  const onCancelAvatar = () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview); setAvatarPreview(null); setAvatarFile(null); };
 
-    return (
-        <div className="p-4 max-w-xl mx-auto">
-            <h1 className="text-2xl font-bold mb-4">Mi Perfil</h1>
-            {mensaje && <p className="text-green-600 mb-2">{mensaje}</p>}
-            <p><strong>Email:</strong> {perfil.email}</p>
-            <p><strong>Tipo de usuario:</strong> {perfil.tipo_usuario}</p>
+  const resolveAvatarSrc = (p) => {
+    const src = p?.foto_perfil;
+    if (!src) return "/images/perfil.png";
+    if (src.startsWith("http")) return src;
+    const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+    return `${base}${src}`;
+  };
 
-            {editMode ? (
-                <>
-                    <input
-                        type="text"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleChange}
-                        className="border p-2 w-full my-2"
-                    />
-                    <button onClick={handleSubmit} className="bg-blue-600 text-white p-2 rounded">Guardar</button>
-                    <button onClick={() => setEditMode(false)} className="ml-2 p-2">Cancelar</button>
-                </>
-            ) : (
-                <>
-                    <p><strong>Username:</strong> {perfil.username}</p>
-                    <button onClick={() => setEditMode(true)} className="bg-gray-800 text-white px-4 py-2 rounded mt-2">
-                        Editar Perfil
-                    </button>
-                </>
-            )}
-            <button>
-                <Link href="/dashboard" className="bg-blue-600 text-white px-4 py-2 rounded mt-2">
-                    Volver al Inicio
-                </Link>
-            </button>
-        </div>
-    );
+  const buildInfoCards = (p) => {
+    const base = [
+      { color: "salmon", value: p?.email ?? "-", label: "Email" },
+      { color: "green", value: p?.ciudad || "-", label: "Ciudad" },
+      { color: "salmon", value: p?.telefono || "-", label: "Teléfono" },
+    ];
+    if (p?.tipo_usuario === "adoptante") base.push({ color:"green", value:p?.mascotas_adoptadas ?? 0, label:"Mascotas adoptadas" });
+    else if (p?.tipo_usuario === "veterinario") base.push({ color:"green", value:p?.mascotas_publicadas ?? 0, label:"Mascotas publicadas" });
+    return base;
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <PerfilView
+          perfil={perfil}
+          mensaje={mensaje}
+          onEdit={(v = true) => setEditMode(v)}
+          onOpenFile={onOpenFile}
+          onUploadAvatar={onUploadAvatar}
+          onCancelAvatar={onCancelAvatar}
+          avatarPreview={avatarPreview}
+          fileInputRef={fileInputRef}
+          resolveAvatarSrc={resolveAvatarSrc}
+          editMode={editMode}
+          formData={formData}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          saving={saving}
+          uploading={uploading}
+          buildInfoCards={buildInfoCards}
+        />
+      </div>
+    </div>
+  );
 }
