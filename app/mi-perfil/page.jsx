@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import PerfilView from "@/components/PerfilView";
 import { apiFetch } from "@/lib/apiClient";
+import VeterinarioHeader from "@/components/VeterinarioHeader";
+import AdoptanteHeader from "@/components/AdoptanteHeader";
 
 export default function PerfilPage() {
   const { perfil, loading, mensaje, setMensaje, saving, uploading, saveProfile, saveAvatar } = useProfile();
@@ -44,7 +46,7 @@ export default function PerfilPage() {
 
   const resolveAvatarSrc = (p) => {
     const src = p?.foto_perfil;
-    if (!src) return "/images/perfil.png";
+    if (!src) return "https://petmatch-imagenes.s3.us-east-2.amazonaws.com/fotos-perfil/perfil_defualt.jpg";
     if (src.startsWith("http")) return src;
     const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
     return `${base}${src}`;
@@ -62,7 +64,9 @@ export default function PerfilPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]">
+    <div>
+      {perfil.tipo_usuario === "adoptante" ? <AdoptanteHeader/> : <VeterinarioHeader/>}
+      <div className="min-h-screen bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <PerfilView
           perfil={perfil}
@@ -83,6 +87,7 @@ export default function PerfilPage() {
           buildInfoCards={buildInfoCards}
         />
       </div>
+    </div>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+"use client"
+
 import { FaPaw, FaBell } from 'react-icons/fa';
 import Link from 'next/link';
 import BotonCerrarSesion from '@/components/BotonCerrarSesión';

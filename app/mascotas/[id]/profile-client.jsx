@@ -96,7 +96,7 @@ export default function PetProfile({ mascota }) {
               <p className="text-[#61666b] mt-2">¡Dale la oportunidad de un nuevo hogar!</p>
               <div className="mt-4 flex flex-col gap-3">
                 <Link
-                  href={`/adopcion/solicitud?petId=${encodeURIComponent(id)}`}
+                  href={`/mascotas/formulario-adopcion?petId=${encodeURIComponent(id)}`}
                   className="inline-flex items-center justify-center rounded-xl px-5 py-3 bg-[#7d9a75] text-white hover:bg-[#607859] transition-colors"
                 >
                   Solicitar adopción

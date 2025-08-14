@@ -42,7 +42,7 @@ export default function AdoptanteDashboard() {
             <AdoptanteHeader />
 
             <Hero />
-            <SeccionMedia cantidadMascotas={mascotas.length}/>
+            <SeccionMedia cantidadMascotas={mascotas.length} texto={"listas para adoptar"}/>
             <div className='flex gap-4 justify-center flex-wrap bg-[#f6f5f3]'>
                     {mascotas.map((mascota) => (
                         <div key={mascota.id} className="p-6 mb-4 max-w-md">            

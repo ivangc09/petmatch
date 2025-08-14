@@ -5,7 +5,7 @@ import BotonCerrarSesion from '@/components/BotonCerrarSesión';
 export default function VeterinarioHeader() {
     
     return(
-        <header className="w-full bg-[#faf6f3] shadow-md p-4 flex">
+        <header className="w-full bg-white shadow-md p-4 flex">
             <div className='flex justify-center'>
                 <Link href="/veterinario" className='flex items-center gap-3 text-[#e0795e]'>
                     <FaPaw size={28}/>

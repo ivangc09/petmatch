@@ -1,4 +1,4 @@
-export default function SeccionMedia({ cantidadMascotas }) {
+export default function SeccionMedia({ cantidadMascotas, texto }) {
     return (
         <section className="bg-white p-8">
             <div className="font-[Inter]">
@@ -6,7 +6,7 @@ export default function SeccionMedia({ cantidadMascotas }) {
                     Mascotas Disponibles
                 </h1>
                 <p className="mt-4 text-gray-600">
-                    Mostrando {cantidadMascotas} mascotas disponibles para adopción.
+                    Mostrando {cantidadMascotas} mascotas {texto}
                 </p>
             </div>
         </section>

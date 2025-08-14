@@ -8,7 +8,7 @@ export default function PerfilView({
     <div className="rounded-3xl bg-white/95 border border-black/5 shadow-[0_12px_40px_rgba(0,0,0,0.08)] px-6 py-8 md:px-10 md:py-10 flex gap-6">
       {/* Avatar */}
       <div className="shrink-0 flex flex-col items-center">
-        <img src={avatarPreview || resolveAvatarSrc(perfil)} alt="Perfil" className="w-24 h-24 rounded-full mb-3 object-cover border border-black/5"/>
+        <img src={avatarPreview || resolveAvatarSrc(perfil)} alt="Perfil" className="w-50 h-50 rounded-full mb-3 object-cover border border-black/5"/>
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onOpenFile}/>
         {!avatarPreview ? (
           <button onClick={() => fileInputRef.current?.click()} className="text-sm px-3 py-1.5 rounded-md border border-gray-300 hover:bg-gray-50">Cambiar foto</button>
@@ -28,7 +28,7 @@ export default function PerfilView({
         <h1 className="text-3xl font-bold text-gray-800 font-[Inter]">
           Bienvenido de vuelta,<span className="font-[Dancing_Script] text-[#df7a5e] text-4xl"> {perfil?.username}</span>
         </h1>
-        <p className="mt-3 font-[Inter] text-gray-600 text-lg">Detrás de cada mascota feliz hay una persona como tú…</p>
+        <p className="mt-3 font-[Inter] text-gray-600 text-lg">Detrás de cada mascota feliz hay una persona como tú, dispuesta a dar amor sin esperar nada a cambio. Por ti, hoy hay más colitas moviéndose de felicidad y corazones latiendo con gratitud.</p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
           {buildInfoCards(perfil).map((c, i) => (
