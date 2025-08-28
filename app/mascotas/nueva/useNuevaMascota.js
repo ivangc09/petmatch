@@ -52,7 +52,7 @@ export function useNuevaMascota() {
             const data = new FormData();
             data.append("file", imagen);
 
-            const res = await fetch("http://localhost:8080/clasificar", {
+            const res = await fetch("https://clasificadormascotas-production.up.railway.app/clasificar", {
                 method: "POST",
                 body: data,
             });

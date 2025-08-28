@@ -23,7 +23,7 @@ function Botones({ tipoUsuario, idMascota }) {
                     <button className="mt-6 bg-[#7d9a75] text-white px-6 py-3 rounded-md hover:bg-[#607859] transition-colors">Editar</button>
                 </div>
                 <div>
-                    <button className="mt-6 bg-[#e0795e] text-white px-6 py-3 rounded-md hover:bg-[#D3764C] transition-colors">Adoptado</button>
+                    <button className="mt-6 bg-[#e0795e] text-white px-6 py-3 rounded-md hover:bg-[#D3764C] transition-colors">Eliminar</button>
                 </div>
                 
             </div>
