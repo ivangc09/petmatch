@@ -1,9 +1,9 @@
-// app/.../perfil/page.jsx
 "use client";
+
 import { useRef, useState } from "react";
 import { useProfile } from "@/hooks/useProfile";
-import PerfilView from "@/components/PerfilView";
 import { apiFetch } from "@/lib/apiClient";
+import PerfilView from "@/components/PerfilView";
 import VeterinarioHeader from "@/components/VeterinarioHeader";
 import AdoptanteHeader from "@/components/AdoptanteHeader";
 

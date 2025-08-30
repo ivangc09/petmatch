@@ -4,13 +4,12 @@ import { FaPaw, FaBell, FaComments } from "react-icons/fa";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import BotonCerrarSesion from "@/components/BotonCerrarSesión";
-import UserChat from "@/components/UserChat"; // <-- nuestro componente de DMs
+import UserChat from "@/components/UserChat";
 
 export default function AdoptanteHeader({ otherUserId = 2, chatTitle = "Chat con Juan" }) {
   const [showChat, setShowChat] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
 
-  // Lee el usuario logueado desde localStorage (flexible a distintos shapes)
   useEffect(() => {
     try {
       if (typeof window === "undefined") return;

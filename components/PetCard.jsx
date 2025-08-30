@@ -20,10 +20,8 @@ function Botones({ tipoUsuario, idMascota }) {
         return (
             <div className="flex justify-end mt-4 gap-4">
                 <div>
-                    <button className="mt-6 bg-[#7d9a75] text-white px-6 py-3 rounded-md hover:bg-[#607859] transition-colors">Editar</button>
-                </div>
-                <div>
-                    <button className="mt-6 bg-[#e0795e] text-white px-6 py-3 rounded-md hover:bg-[#D3764C] transition-colors">Eliminar</button>
+                    <Link href={`/mascotas/${idMascota}`}
+                    className="mt-8 bg-[#7d9a75] text-white px-6 py-3 rounded-md hover:bg-[#607859] transition-colors">Ver detalle</Link>
                 </div>
                 
             </div>

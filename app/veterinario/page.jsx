@@ -34,7 +34,7 @@ export default function VeterinarioDashboard() {
 
         if (response.ok) {
             const data = await response.json();
-            console.log("🐶 Data recibida desde la API:", data);
+            console.log("Data recibida desde la API:", data);
             setMascotas(data);
         } else {
             console.error("No se pudieron cargar las mascotas");
