@@ -32,15 +32,32 @@ function Botones({ tipoUsuario, idMascota }) {
 }
 
 export default function PetCard({ mascota, tipoUsuario }) {
+
+    const rawEstado = (mascota.estados ?? mascota.estado ?? "")
+    .toString()
+    .trim()
+    .toLowerCase();
+
+    const estadoClr = {
+        disponible: "bg-[#7d9a75]",
+        adoptado: "bg-[#e0795e]",
+        reservado: "bg-amber-500",
+    }[rawEstado] || "bg-gray-500";
     return (
         <div>
-            <div className="md:h-1/3">
+            <div className="relative md:h-1/3">
                 {mascota.fotos && (
                 <img
                     src={mascota.fotos}
                     alt={mascota.nombre}
                     className="w-full h-[200px] object-fill rounded-t-lg"
                 />
+                )}
+
+                {rawEstado && (
+                    <span className={`absolute top-2 left-2 z-10 rounded-full ${estadoClr} text-white text-xs font-medium px-2.5 py-1 shadow`}>
+                        {rawEstado.charAt(0).toUpperCase() + rawEstado.slice(1)}
+                    </span>
                 )}
             </div>
 

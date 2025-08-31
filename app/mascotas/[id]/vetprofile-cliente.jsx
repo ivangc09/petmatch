@@ -53,7 +53,7 @@ export default function VetPetProfile( { mascota } ) {
             if(res.ok){
                 setStatus("success");
                 show({ title: "Listo", message: "Mascota eliminada.", variant: "success" });
-                setTimeout(() => router.push("/veterinario"), 1500);
+                setTimeout(() => router.push("/veterinario"), 1200);
 
             }
             else{
@@ -112,7 +112,7 @@ export default function VetPetProfile( { mascota } ) {
                             <img
                                 src={mainImg}
                                 alt={`Foto de ${nombre}`}
-                                className="w-full h-[360px] md:h-[440px] object-center object-cover"
+                                className="w-full h-[360px] md:h-[440px] object-center"
                             />
                             {Array.isArray(fotos) && fotos.length > 1 && (
                             <div className="flex gap-3 p-4 overflow-x-auto">
@@ -155,7 +155,7 @@ export default function VetPetProfile( { mascota } ) {
                                 <h3 className="text-xl font-bold text-[#2b3136]">¿Te gustaría modificar algo?</h3>
                                 <div className="mt-4 flex flex-col gap-3">
                                     <Link
-                                        href={`/mascotas/formulario-adopcion?petId=${encodeURIComponent(id)}`}
+                                        href={`/mascotas/${id}/editar`}
                                         className="inline-flex items-center justify-center rounded-xl px-5 py-3 bg-[#7d9a75] text-white hover:bg-[#607859] transition-colors"
                                     >
                                         Editar información
