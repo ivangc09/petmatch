@@ -77,7 +77,6 @@ export default function VetPetProfile( { mascota } ) {
             <div className="min-h-screen bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]">
                 <div className="mx-auto max-w-6xl px-4 py-8">
 
-                    {/* Banners reutilizables (opcional, además del toast) */}
                     {status === "success" && (
                         <AlertBanner variant="success">
                             Mascota eliminada correctamente.{" "}

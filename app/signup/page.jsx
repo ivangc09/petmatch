@@ -1,8 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useConfirm, useToast, AlertBanner } from "@/components/FeedBack";
 
 export default function RegistroPage() {
+    const router = useRouter();
+    const { show } = useToast();
 
     const [formData, setFormData] = useState({
         username: "",
@@ -34,12 +38,12 @@ export default function RegistroPage() {
         const data = await response.json();
 
         if (response.ok) {
-            console.log("✅ Registro exitoso:", data);
+            show({ title: "Éxito", message: "Registro exitoso.", variant: "success" });
             setRegistroExitoso(true);
             setError(null);
-            router.push("/login");
+            setTimeout(() => router.push("/login"), 300);
         } else {
-            console.error("❌ Error:", data);
+            show({ title: "Error", message: "Error en el registro.", variant: "danger" });
             setError(data);
             setRegistroExitoso(false);
         }
