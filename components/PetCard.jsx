@@ -71,7 +71,7 @@ export default function PetCard({ mascota, tipoUsuario }) {
                     <p className="text-[#959ca2] min-h-[70px] max-h-[70px] line-clamp-3">{mascota.descripcion}</p>
                 </div>
                 
-                <div className="flex justify-center">
+                <div className="flex justify-center capitalize">
                     <div className="flex flex-col text-center">
                         <p>Tamaño</p>
                         <p className="text-[#959ca2]">{mascota.tamaño}</p>
@@ -84,7 +84,7 @@ export default function PetCard({ mascota, tipoUsuario }) {
 
                     <div className="flex flex-col ml-4 text-center">
                         <p>Ciudad</p>
-                        <p className="text-[#959ca2]">Guadalajara</p>
+                        <p className="text-[#959ca2]">{mascota.ciudad || "-"}</p>
                     </div>
 
                 </div>

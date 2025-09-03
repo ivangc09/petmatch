@@ -91,17 +91,25 @@ export default function VetPetProfile( { mascota } ) {
 
 
                     {/* Encabezado */}
-                    <header className="flex items-center justify-between mb-6">
+                    <header className="mb-6">
+                        <nav className="text-sm text-[#6b7076]">
+                            <Link href="/veterinario" className="hover:underline">Panel</Link>
+                            <span className="mx-2">/</span>
+                            <span className="mx-2">{mascota.nombre}</span>
+                        </nav>
+                    </header>
+                    <div className="flex items-center justify-between mb-6">
+                        
                         <div>
                             <h1 className="text-4xl md:text-5xl font-extrabold text-[#2b3136]">{nombre}</h1>
-                            <p className="text-[#6b7076] mt-2">
+                            <p className="text-[#6b7076] mt-2 capitalize">
                                 {raza || "-"} • {sexo || "-"} • {tamaño || "-"}
                             </p>
                         </div>
                         <Link href="/veterinario" className="rounded-xl px-4 py-2 bg-[#fceae0] text-[#9f5b53] hover:bg-[#f8dfd2]">
                             ← Volver
                         </Link>
-                    </header>
+                    </div>
 
                     <div className="grid lg:grid-cols-3 gap-8">
                         {/* Columna principal */}
