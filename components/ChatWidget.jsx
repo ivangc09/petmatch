@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { MessageCircle, X, Minus, Send, Loader2 } from "lucide-react";
+import { MessageCircle, X, Minus, Send, Loader2,Image } from "lucide-react";
 
 export default function ChatWidget({
   brand = "PawConnect",
@@ -12,10 +12,11 @@ export default function ChatWidget({
   textColor = "#2b3136",
   gradientFrom = "#fff6f1",
   gradientTo = "#fdeee7",
-  messages = [],          // ← controlado por el padre
-  loading = false,        // ← controlado por el padre
-  onSend,                 // ← callback del padre (msg:string)
-  initialOpen = false,     // opcional
+  messages = [],          
+  loading = false,        
+  onSend,                 
+  initialOpen = false,
+  onImage,
 }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(initialOpen);
@@ -50,7 +51,7 @@ export default function ChatWidget({
     e?.preventDefault?.();
     const value = input.trim();
     if (!value) return;
-    onSend?.(value);  // ← el padre se encarga de push + fetch
+    onSend?.(value); 
     setInput("");
   }
 
@@ -135,6 +136,24 @@ export default function ChatWidget({
           }
         }}
       />
+      <label htmlFor="file-upload"
+        className="h-10 w-10 rounded-xl flex items-center justify-center shadow transition-colors"
+        style={{ backgroundColor: "#d0764d", color: "white" }}>
+        <Image size={18} />
+      </label>
+
+      <input
+        id="file-upload"
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && onImage) onImage(file);
+          e.target.value = null;
+        }}
+      />
+
       <button
         type="submit"
         className="h-10 w-10 rounded-xl flex items-center justify-center shadow transition-colors"
