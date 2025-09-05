@@ -22,7 +22,7 @@ export default function VeterinarioHeader() {
         if (id != null) setCurrentUserId(Number(id));
       }
     } catch {}
-    const t = localStorage.getItem("token") || localStorage.getItem("access_token");
+    const t = localStorage.getItem("token");
     if (t) setToken(t);
   }, []); // 👈 importante el arreglo de dependencias
 

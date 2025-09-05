@@ -1,48 +1,75 @@
 "use client";
-import React from "react";
+import { useEffect, useMemo, useRef } from "react";
 
-export default function ListaMensajes({ messages, currentUserId, peerId }) {
-  const me  = currentUserId != null ? Number(currentUserId) : null;
-  const pid = peerId != null ? Number(peerId) : null;
+export default function ListaMensajes({
+  items,
+  messages,
+  currentUserId,
+  loading = false,
+}) {
+  // Acepta "items" o "messages" según cómo lo llames desde el padre
+  const data = useMemo(() => (Array.isArray(items) ? items : messages) ?? [], [items, messages]);
+  const me = currentUserId != null ? Number(currentUserId) : null;
+
+  const endRef = useRef(null);
+  useEffect(() => {
+    // Auto scroll al final cuando cambien los mensajes
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [data?.length]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#fef2ec]">
-      {messages.map((m) => {
-        const sid =
-          m?.sender_id != null
-            ? Number(m.sender_id)
-            : m?.sender?.id != null
-            ? Number(m.sender.id)
-            : null;
+    <div className="flex flex-col gap-3 p-4 overflow-y-auto h-full bg-[#f8f9fa]">
+      {loading && (
+        <div className="mx-auto text-xs text-gray-500 animate-pulse">Cargando…</div>
+      )}
 
-        const mine =
-          m?.mine === true
-            ? true
-            : me != null
-            ? sid === me
-            : pid != null
-            ? sid != null && sid !== pid
-            : false;
+      {data.map((m, idx) => {
+        const sid =
+            m?.sender_id != null ? Number(m.sender_id)
+            : m?.sender?.id != null ? Number(m.sender.id)
+            : null;
+        const mine = m?.mine ?? (me != null && sid === me);
+
+        const key = m?.client_id ?? m?.id ?? idx;
 
         return (
-          <div key={String(m.id)} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+          <div
+            key={key}
+            className={`w-full flex ${mine ? "justify-end" : "justify-start"}`}
+          >
             <div
-              className={`max-w-[70%] rounded-2xl px-4 py-3 shadow ${
-                mine ? "bg-[#7d9a75] text-white" : "bg-white text-[#2b3136]"
-              }`}
+              className={`max-w-[78%] rounded-2xl px-4 py-2 shadow
+                ${mine ? "bg-green-500 text-white" : "bg-white border border-gray-200 text-gray-800"}
+              `}
             >
-              <div className="whitespace-pre-wrap break-words">{m.text}</div>
-              <div className={`text-xs mt-2 ${mine ? "text-white/80" : "text-gray-500"}`}>
-                {formatDate(m.created_at)}
+              <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                {m?.text ?? ""}
+              </div>
+              <div
+                className={`mt-1 text-[10px] ${
+                  mine ? "text-white/80" : "text-gray-500"
+                }`}
+              >
+                {formatTime(m?.created_at)}
               </div>
             </div>
           </div>
         );
       })}
+
+      <div ref={endRef} />
     </div>
   );
 }
 
-function formatDate(iso) {
-  try { return new Date(iso).toLocaleString(); } catch { return String(iso || ""); }
+function formatTime(ts) {
+  if (!ts) return "";
+  try {
+    const d = typeof ts === "string" ? new Date(ts) : ts;
+    if (Number.isNaN(d?.getTime?.())) return "";
+    // hh:mm:ss 24h con fecha
+    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  } catch {
+    return "";
+  }
 }

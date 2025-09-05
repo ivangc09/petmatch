@@ -16,13 +16,24 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
       setLoading(true);
       try {
         const res = await fetch("http://localhost:8000/api/chat/conversations/", {
-          headers: {Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
+
+        const ctype = res.headers.get("content-type") || "";
+        if (!res.ok || !ctype.includes("application/json")) {
+          const body = await res.text();
+          console.error("Conversations fetch failed:", res.status, res.statusText, ctype, body.slice(0, 300));
+          throw new Error(`Conversations returned ${res.status} ${ctype}`);
+        }
+
         const data = await res.json();
         if (!ignore) setItems(Array.isArray(data) ? data : []);
       } catch (e) {
-        if (!ignore) setItems([]);
+        if (!ignore) {
+          console.error("Conversations error:", e);
+          setItems([]);
+        }
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -58,15 +69,20 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
       ) : (
         <ul className="divide-y">
           {filtered.map((c) => {
-            const pid = c?.peer?.id;
-            const active = pid === activePeerId;
+            const pid = c?.peer?.id;                // id del peer (usuario)
+            const cid = c?.id;                      // id de la conversación (puede ser UUID)
+            const active = Number(pid) === Number(activePeerId);
             return (
               <li
                 key={pid}
-                className={`p-4 hover:bg-gray-50 cursor-pointer flex gap-3 items-center ${
-                  active ? "bg-[#fff6f1]" : ""
-                }`}
-                onClick={() => onSelectPeer(c.peer)}
+                className={`p-4 hover:bg-gray-50 cursor-pointer flex gap-3 items-center ${active ? "bg-[#fff6f1]" : ""}`}
+                onClick={() =>
+                  onSelectPeer({
+                    peerId: pid,
+                    conversationId: cid,
+                    peer: c?.peer || null,
+                  })
+                }
               >
                 <div className="flex-1">
                   <div className="flex items-center justify-between">

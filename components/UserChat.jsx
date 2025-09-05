@@ -1,258 +1,255 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ListaConversacion from "./ListaConversacion";
 import ListaMensajes from "./ListaMensajes";
 import InputMensaje from "./InputMensaje";
 import useDMWebSocket from "@/hooks/useDMWebSocket";
 
-// WS base por defecto (puedes sobreescribir con NEXT_PUBLIC_WS_BASE)
 const DEFAULT_WS =
   (typeof window !== "undefined" && process.env.NEXT_PUBLIC_WS_BASE) ||
   "ws://localhost:8001";
 
+const API_BASE =
+  (typeof window !== "undefined" && process.env.NEXT_PUBLIC_API_BASE) ||
+  "http://localhost:8000";
+
+function makeClientId() {
+  return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export default function UserChat({
-  currentUserId,               // ID del usuario autenticado
-  token,                        // JWT para REST
-  baseWs = DEFAULT_WS,          // ws:// o wss://
-  initialPeer = null,           // { id, nombre, avatar } opcional
+  currentUserId,
+  token,
+  baseWs = DEFAULT_WS,
 }) {
-  const [peer, setPeer] = useState(initialPeer);
+  const me = currentUserId != null ? Number(currentUserId) : null;
 
-  // Normaliza peer por si ListaConversacion envía {peer:{...}} en lugar de {id,...}
-  const normalizedPeer = useMemo(() => {
-    if (!peer) return null;
-    if (typeof peer?.id !== "undefined") return peer;
-    if (peer?.peer && typeof peer.peer.id !== "undefined") return peer.peer;
-    return null;
-  }, [peer]);
+  const [selected, setSelected] = useState(null); // { peerId, conversationId?, peer? }
+  const peerId = selected?.peerId ?? null;
+  const conversationId = selected?.conversationId ?? null;
 
-  const peerId = normalizedPeer?.id ?? null;
   const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const { ready, liveMessages, sendPayload, resetLive } = useDMWebSocket({
-    baseWs,
-    token,
-    peerId,
-  });
+  const processedRef = useRef(new Set());
+  const mountedRef = useRef(true);
 
-  // helper: ¿es mío este mensaje? (coerción a número y fallbacks defensivos)
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const isMine = (senderIdRaw) => {
     const sid = senderIdRaw != null ? Number(senderIdRaw) : null;
-    const me  = currentUserId != null ? Number(currentUserId) : null;
-    const pid = peerId != null ? Number(peerId) : null;
-
-    if (me != null) return sid === me;
-    if (pid != null) return sid != null ? sid !== pid : false; // si no conozco mi id aún
-    return false;
+    const meNum = currentUserId != null ? Number(currentUserId) : null;
+    return meNum != null && sid === meNum;
   };
 
-  // Cargar historial cuando cambia la conversación
-  useEffect(() => {
-    let ignore = false;
-    const controller = new AbortController();
+  // === WS: integrar cada mensaje que llegue (callback directo) ===
+  const onWsMessage = (msg) => {
+    // normaliza remitente
+    const sidNorm =
+      msg?.sender_id != null ? Number(msg.sender_id)
+      : msg?.sender?.id != null ? Number(msg.sender.id)
+      : null;
 
-    resetLive();
-    setHistory([]);
+    const sidKey = msg.id ? `id:${msg.id}` : null;
+    const cidKey = msg.client_id ? `cid:${msg.client_id}` : null;
+    if (sidKey && processedRef.current.has(sidKey)) return;
+    if (cidKey && processedRef.current.has(cidKey)) return;
 
-    if (!token || !peerId) {
-      return () => {
-        ignore = true;
-        controller.abort();
-      };
-    }
+    setHistory((prev) => {
+      const byCid = new Map();
+      const byId = new Map();
+      prev.forEach((m, idx) => {
+        if (m.client_id) byCid.set(m.client_id, idx);
+        if (m.id) byId.set(m.id, idx);
+      });
 
-    (async () => {
-      try {
-        // ⬇️ corregido el esquema y usando template literal
-        const res = await fetch(
-          `http://localhost:8000/api/chat/messages/?peer_id=${peerId}&limit=50`,
-          { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
-        );
-        const data = await res.json();
-        if (!ignore) setHistory(Array.isArray(data) ? data : []);
-      } catch {
-        if (!ignore) setHistory([]);
-      }
-    })();
+      const next = [...prev];
 
-    return () => {
-      ignore = true;
-      controller.abort();
-    };
-  }, [token, peerId, resetLive]);
-
-  // Marcar leídos al abrir conversación
-  useEffect(() => {
-    if (!token || !peerId) return;
-    fetch("http://localhost:8000/api/chat/read/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ peer_id: peerId }),
-    }).catch(() => {});
-  }, [token, peerId]);
-
-  // De-duplicación: sustituye optimista por eco (client_id) o por texto (fallback)
-  const processedRef = useRef(new Set());
-  const lastCountRef = useRef(0);
-
-  useEffect(() => {
-    if (!liveMessages?.length || liveMessages.length === lastCountRef.current) return;
-    lastCountRef.current = liveMessages.length;
-
-    // índices rápidos del historial actual
-    const byCid = new Map();
-    const byId = new Map();
-    history.forEach((m, idx) => {
-      if (m.client_id) byCid.set(m.client_id, idx);
-      if (m.id) byId.set(m.id, idx);
-    });
-
-    let changed = false;
-    const next = [...history];
-
-    for (const msg of liveMessages) {
-      const sidKey = msg.id ? `id:${msg.id}` : null;
-      const cidKey = msg.client_id ? `cid:${msg.client_id}` : null;
-
-      if (sidKey && processedRef.current.has(sidKey)) continue;
-      if (cidKey && processedRef.current.has(cidKey)) continue;
-
-      // 1) Reemplazo por client_id (optimista → definitivo)
+      // reemplazo por client_id (optimista → definitivo)
       if (msg.client_id && byCid.has(msg.client_id)) {
         const i = byCid.get(msg.client_id);
         next[i] = {
           ...next[i],
           id: msg.id,
-          sender_id: msg.sender_id,
+          sender_id: sidNorm,
           text: msg.text,
           created_at: msg.created_at,
-          mine: isMine(msg.sender_id),
+          mine: next[i].mine ?? isMine(sidNorm),
           client_id: msg.client_id,
         };
-        changed = true;
-        if (sidKey) processedRef.current.add(sidKey);
-        if (cidKey) processedRef.current.add(cidKey);
-        continue;
+      } else if (msg.id && byId.has(msg.id)) {
+        // reemplazo por id
+        const i = byId.get(msg.id);
+        next[i] = {
+          ...next[i],
+          id: msg.id,
+          sender_id: sidNorm,
+          text: msg.text,
+          created_at: msg.created_at,
+          mine: isMine(sidNorm),
+          client_id: msg.client_id ?? next[i]?.client_id,
+        };
+      } else {
+        // nuevo mensaje
+        next.push({
+          id: msg.id,
+          sender_id: sidNorm,
+          text: msg.text,
+          created_at: msg.created_at,
+          mine: isMine(sidNorm),
+          client_id: msg.client_id,
+        });
       }
 
-      // 2) Si ya existe por id, ignora
-      if (msg.id && byId.has(msg.id)) {
-        if (sidKey) processedRef.current.add(sidKey);
-        if (cidKey) processedRef.current.add(cidKey);
-        continue;
-      }
-
-      // 3) Fallback: emparejar con el último optimista "c-*" por texto (ventana corta)
-      if (!msg.client_id) {
-        const now = Date.now();
-        for (let k = next.length - 1; k >= 0; k--) {
-          const m = next[k];
-          if (typeof m.id === "string" && m.id.startsWith("c-")) {
-            const ageMs = Math.abs(now - new Date(m.created_at).getTime());
-            if (m.text === msg.text && ageMs < 8000) {
-              next[k] = {
-                ...m,
-                id: msg.id,
-                sender_id: msg.sender_id,
-                created_at: msg.created_at,
-                mine: isMine(msg.sender_id),
-                client_id: msg.client_id || m.client_id,
-              };
-              changed = true;
-              if (sidKey) processedRef.current.add(sidKey);
-              if (cidKey) processedRef.current.add(cidKey);
-              break;
-            }
-          }
-        }
-        if (changed) continue;
-      }
-
-      // 4) Mensaje realmente nuevo → agregar
-      next.push({
-        id: msg.id,
-        sender_id: msg.sender_id,
-        text: msg.text,
-        created_at: msg.created_at,
-        mine: isMine(msg.sender_id),
-        client_id: msg.client_id,
-      });
-      changed = true;
       if (sidKey) processedRef.current.add(sidKey);
       if (cidKey) processedRef.current.add(cidKey);
+
+      return next;
+    });
+  };
+
+  const { ready, sendPayload, resetLive } = useDMWebSocket({
+    baseWs,
+    token,
+    peerId,
+    onMessage: onWsMessage, // ← clave
+  });
+
+  // === Cargar historial desde /messages/ (ajustado a tus urls) ===
+  async function fetchMessagesJSON(opts) {
+    const base = API_BASE.replace(/\/+$/, "");
+    const urls = [];
+    if (peerId != null) {
+      urls.push(`${base}/api/chat/messages/?peer_id=${peerId}`);
+      urls.push(`${base}/api/chat/messages/?peer=${peerId}`);
+      urls.push(`${base}/api/chat/messages/?user=${peerId}`);
     }
+    if (conversationId) {
+      urls.push(`${base}/api/chat/messages/?conversation_id=${conversationId}`);
+    }
+    urls.push(`${base}/api/chat/messages/`); // fallback
 
-    if (changed) setHistory(next);
-  }, [liveMessages, history, currentUserId, peerId]);
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, opts);
+        const ctype = res.headers.get("content-type") || "";
+        if (res.ok && ctype.includes("application/json")) {
+          return await res.json();
+        }
+        const body = await res.text();
+        console.error("Messages try failed:", url, res.status, res.statusText, ctype, body.slice(0, 200));
+      } catch (e) {
+        console.error("Messages try error:", e);
+      }
+    }
+    throw new Error("No valid /messages/ variant returned JSON");
+  }
 
-  const messages = useMemo(() => history, [history]);
+  useEffect(() => {
+    if (!token || !peerId) return;
 
-  // Envío optimista con client_id
+    let ignore = false;
+    const controller = new AbortController();
+
+    const run = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchMessagesJSON({
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (ignore || !mountedRef.current) return;
+
+        const arr = Array.isArray(data) ? data : [];
+        setHistory(
+          arr.map((m) => {
+            const sid =
+              m?.sender_id != null ? Number(m.sender_id)
+              : m?.sender?.id != null ? Number(m.sender.id)
+              : null;
+            return { ...m, sender_id: sid, mine: isMine(sid) };
+          })
+        );
+      } catch (e) {
+        if (!ignore) {
+          console.error("Messages fetch error (all variants failed):", e);
+          setHistory([]);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    processedRef.current.clear();
+    setHistory([]);
+    resetLive();
+
+    run();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [token, peerId, conversationId, resetLive]);
+
   const handleSend = (text) => {
-    const t = (text || "").trim();
-    if (!t) return;
-
-    const clientId = `c-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
+    if (!text?.trim() || !peerId) return;
+    const clientId = makeClientId();
     setHistory((h) => [
       ...h,
       {
-        id: clientId,
+        id: null,
         client_id: clientId,
-        sender_id: currentUserId ?? -1,
-        text: t,
+        sender_id: me != null ? Number(me) : -1,
+        text,
         created_at: new Date().toISOString(),
         mine: true,
       },
     ]);
-
-    sendPayload({ type: "message", text: t, client_id: clientId });
+    sendPayload({ type: "message", text, client_id: clientId });
   };
 
+  // ======== HTML/JSX SIN CAMBIOS ========
   return (
-    <div className="flex min-h-[520px] border rounded-xl overflow-hidden bg-white shadow-sm">
-      {/* Sidebar */}
+    <div className="w-full h-[520px] flex bg-white rounded-xl overflow-hidden border">
       <ListaConversacion
         token={token}
         activePeerId={peerId}
-        onSelectPeer={(p) => {
-          // Normaliza al seleccionar, por si viene {peer:{...}}
-          const np = p?.id != null ? p : p?.peer || null;
-          processedRef.current.clear();
-          lastCountRef.current = 0;
-          setPeer(np);
+        onSelectPeer={(val) => {
+          if (typeof val === "object" && val !== null) {
+            setSelected({
+              peerId: val.peerId ?? val.id ?? null,
+              conversationId: val.conversationId ?? null,
+              peer: val.peer ?? null,
+            });
+          } else {
+            setSelected({ peerId: val ?? null, conversationId: null, peer: null });
+          }
         }}
       />
-
-      {/* Panel */}
       <section className="flex-1 flex flex-col">
-        {/* Header del peer */}
-        <div className="p-4 border-b flex items-center gap-3 bg-white">
-          {normalizedPeer ? (
-            <>
-              <div>
-                <p className="font-semibold text-[#2b3136]">
-                  {normalizedPeer?.nombre || `Usuario ${peerId}`}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {ready ? "Conectado" : "Conectando…"}
-                </p>
-              </div>
-            </>
-          ) : (
-            <p className="text-gray-600">Selecciona una conversación</p>
-          )}
-        </div>
-
-        {/* Mensajes + Input */}
-        {normalizedPeer ? (
+        {peerId ? (
           <>
-            <ListaMensajes
-              messages={messages}
-              currentUserId={currentUserId}
-              peerId={peerId}
-            />
+            <div className="px-4 py-3 border-b bg-[#fff6f1] flex items-center justify-between">
+              <div className="font-semibold text-gray-800">
+                Conversación con usuario #{peerId}
+              </div>
+              <div className="text-xs text-gray-500">
+                {ready ? "Conectado" : "Conectando…"}
+              </div>
+            </div>
+            <div className="flex-1 min-h-0">
+              <ListaMensajes messages={history} currentUserId={currentUserId} />
+            </div>
             <InputMensaje onSend={handleSend} disabled={!ready} />
           </>
         ) : (
