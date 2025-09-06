@@ -52,7 +52,7 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
   );
 
   return (
-    <aside className="w-full md:w-80 border-r bg-white">
+    <aside className="w-full md:w-80 border-r border-[#f3d7cb] bg-white">
       <div className="p-3 border-b">
         <input
           value={q}

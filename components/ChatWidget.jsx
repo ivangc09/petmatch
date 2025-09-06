@@ -57,7 +57,6 @@ export default function ChatWidget({
 
   function handleSuggestion(s) {
     setInput(s);
-    // envía de una:
     setTimeout(() => handleSubmit(), 0);
   }
 

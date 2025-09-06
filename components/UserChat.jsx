@@ -46,9 +46,7 @@ export default function UserChat({
     return meNum != null && sid === meNum;
   };
 
-  // === WS: integrar cada mensaje que llegue (callback directo) ===
   const onWsMessage = (msg) => {
-    // normaliza remitente
     const sidNorm =
       msg?.sender_id != null ? Number(msg.sender_id)
       : msg?.sender?.id != null ? Number(msg.sender.id)
@@ -69,7 +67,6 @@ export default function UserChat({
 
       const next = [...prev];
 
-      // reemplazo por client_id (optimista → definitivo)
       if (msg.client_id && byCid.has(msg.client_id)) {
         const i = byCid.get(msg.client_id);
         next[i] = {
@@ -78,11 +75,10 @@ export default function UserChat({
           sender_id: sidNorm,
           text: msg.text,
           created_at: msg.created_at,
-          mine: next[i].mine ?? isMine(sidNorm),
+          mine: next[i].mine === true ? true : isMine(sidNorm),
           client_id: msg.client_id,
         };
       } else if (msg.id && byId.has(msg.id)) {
-        // reemplazo por id
         const i = byId.get(msg.id);
         next[i] = {
           ...next[i],
@@ -94,7 +90,6 @@ export default function UserChat({
           client_id: msg.client_id ?? next[i]?.client_id,
         };
       } else {
-        // nuevo mensaje
         next.push({
           id: msg.id,
           sender_id: sidNorm,
@@ -116,10 +111,9 @@ export default function UserChat({
     baseWs,
     token,
     peerId,
-    onMessage: onWsMessage, // ← clave
+    onMessage: onWsMessage,
   });
 
-  // === Cargar historial desde /messages/ (ajustado a tus urls) ===
   async function fetchMessagesJSON(opts) {
     const base = API_BASE.replace(/\/+$/, "");
     const urls = [];
@@ -131,7 +125,7 @@ export default function UserChat({
     if (conversationId) {
       urls.push(`${base}/api/chat/messages/?conversation_id=${conversationId}`);
     }
-    urls.push(`${base}/api/chat/messages/`); // fallback
+    urls.push(`${base}/api/chat/messages/`);
 
     for (const url of urls) {
       try {
@@ -176,7 +170,7 @@ export default function UserChat({
               m?.sender_id != null ? Number(m.sender_id)
               : m?.sender?.id != null ? Number(m.sender.id)
               : null;
-            return { ...m, sender_id: sid, mine: isMine(sid) };
+            return { ...m, sender_id: sid };
           })
         );
       } catch (e) {
@@ -202,14 +196,15 @@ export default function UserChat({
   }, [token, peerId, conversationId, resetLive]);
 
   const handleSend = (text) => {
-    if (!text?.trim() || !peerId) return;
+    if (!text?.trim() || !peerId || currentUserId == null) return;
+
     const clientId = makeClientId();
     setHistory((h) => [
       ...h,
       {
         id: null,
         client_id: clientId,
-        sender_id: me != null ? Number(me) : -1,
+        sender_id: Number(currentUserId),
         text,
         created_at: new Date().toISOString(),
         mine: true,
@@ -218,9 +213,14 @@ export default function UserChat({
     sendPayload({ type: "message", text, client_id: clientId });
   };
 
-  // ======== HTML/JSX SIN CAMBIOS ========
   return (
-    <div className="w-full h-[520px] flex bg-white rounded-xl overflow-hidden border">
+    <div
+      className="
+        w-full h-[540px] md:h-[580px] flex rounded-2xl overflow-hidden
+        border border-[#f3d7cb]/60 shadow-[0_10px_30px_rgba(0,0,0,.06)]
+        bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]
+      "
+    >
       <ListaConversacion
         token={token}
         activePeerId={peerId}
@@ -236,25 +236,47 @@ export default function UserChat({
           }
         }}
       />
+
       <section className="flex-1 flex flex-col">
         {peerId ? (
           <>
-            <div className="px-4 py-3 border-b bg-[#fff6f1] flex items-center justify-between">
-              <div className="font-semibold text-gray-800">
-                Conversación con usuario #{peerId}
+            {/* Header translúcido con blur */}
+            <div
+              className="
+                px-4 py-3 border-b border-[#f3d7cb]/60 bg-white/70
+                backdrop-blur supports-[backdrop-filter]:bg-white/60
+                flex items-center justify-between
+              "
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-[#7d9a75]/20 ring-1 ring-[#7d9a75]/30" />
+                <div className="font-semibold text-gray-800">
+                  {selected?.peer?.nombre
+                    ? `${selected.peer.nombre}`
+                    : `Conversación con usuario #${peerId}`}
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-600 flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    ready ? "bg-[#7d9a75]" : "bg-amber-500"
+                  }`}
+                />
                 {ready ? "Conectado" : "Conectando…"}
               </div>
             </div>
+
+            {/* Mensajes */}
             <div className="flex-1 min-h-0">
               <ListaMensajes messages={history} currentUserId={currentUserId} />
             </div>
+
+            {/* Input */}
             <InputMensaje onSend={handleSend} disabled={!ready} />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Elige una conversación para empezar a chatear.
+          <div className="flex-1 flex items-center justify-center text-gray-600">
+            Selecciona una conversación para empezar a chatear.
           </div>
         )}
       </section>
