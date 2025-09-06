@@ -51,7 +51,7 @@ function variantStyles(variant) {
     case "success":
       return "border-l-4 border-[#7d9a75] bg-white text-[#2b3136]";
     case "error":
-      return "border-l-4 border-[#e0795e] bg-white text-[#2b3136]";
+      return "border-l-4 border-[#eb3507] bg-white text-[#2b3136]";
     case "warning":
       return "border-l-4 border-amber-500 bg-white text-[#2b3136]";
     default:

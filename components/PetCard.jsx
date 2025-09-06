@@ -61,7 +61,7 @@ export default function PetCard({ mascota, tipoUsuario }) {
                 )}
             </div>
 
-            <div className="flex flex-col md:h-2/3 p-4 font-[Inter] bg-white rounded-b-lg shadow-md">
+            <div className="flex flex-col md:h-2/3 p-4 font-[Inter] bg-white rounded-b-lg shadow-md width-full">
                 <div className="flex justify-between">
                     <h3 className="text-xl font-bold text-[#2b3136]">{mascota.nombre}</h3>
                     <p className="bg-[#fceae0] rounded-full text-[#9f5b53] pl-2 pr-2">{mascota.edad} años</p>
