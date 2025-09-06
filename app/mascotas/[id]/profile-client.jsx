@@ -67,7 +67,7 @@ export default function PetProfile({ mascota }) {
             <nav className="text-sm text-[#6b7076]">
                 <Link href="/veterinario" className="hover:underline">Panel</Link>
                 <span className="mx-2">/</span>
-                <span className="mx-2">{mascota.nombre}</span>
+                <span className="mx-2 font-medium">{mascota.nombre}</span>
             </nav>
           </header>
 

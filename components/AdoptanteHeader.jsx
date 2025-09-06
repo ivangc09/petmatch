@@ -57,7 +57,7 @@ export default function AdoptanteHeader() {
         </button>
 
         <Link href="/adoptante" className="text-[#7d8181] hover:text-[#D3764C]">Inicio</Link>
-        <Link href="" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">Encontrar mascotas</Link>
+        <Link href="/adoptante#mascotas-list" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">Encontrar mascotas</Link>
         <Link href="" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">¿Cómo adoptar?</Link>
         <Link href="/mi-perfil" className="ml-4 text-[#7d8181] hover:text-[#D3764C]">Mi Perfil</Link>
         <BotonCerrarSesion className="ml-4 text-[#7d8181] hover:text-[#D3764C]" />

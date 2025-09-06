@@ -1,6 +1,8 @@
 "use client";
 import { useState,useEffect } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useToast } from "./FeedBack";
 
 const PALETTE = {
   accent: "#7d9a75",
@@ -14,6 +16,7 @@ const PALETTE = {
 };
 
 export default function AdoptionForm({ onSubmit }) {
+  const { show } = useToast();
   const [loading, setLoading] = useState(false);
   const [okMsg, setOkMsg] = useState("");
   const [errMsg, setErrMsg] = useState("");
@@ -91,20 +94,20 @@ export default function AdoptionForm({ onSubmit }) {
     ];
     const missing = reqFields.filter((k) => !required(form[k]));
     if (missing.length) {
-      setErrMsg("Porfa completa los campos obligatorios.");
+      setErrMsg(show({title:"Error", message:`Faltan campos obligatorios: ${missing.join(", ")}`, variant:"danger"}));
       return false;
     }
     // validaciones puntuales
     if (!/^\d{2}$|^\d{1,2}$/.test(form.edad)) {
-      setErrMsg("Edad inválida.");
+      setErrMsg(show({title:"Error", message:"Edad Invalida", variant:"danger"}));
       return false;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) {
-      setErrMsg("Correo inválido.");
+      setErrMsg(show({title:"Error", message:"Correo Invalido", variant:"danger"}));
       return false;
     }
     if (!/^[0-9+\-\s()]{8,}$/.test(form.telefono)) {
-      setErrMsg("Teléfono inválido.");
+      setErrMsg(show({title:"Error", message:"Telefono Invalido", variant:"danger"}));
       return false;
     }
     setErrMsg("");
@@ -119,7 +122,6 @@ export default function AdoptionForm({ onSubmit }) {
       setLoading(true);
       setOkMsg("");
 
-      // Arma FormData para enviar archivos + JSON
       const fd = new FormData();
       fd.append("payload", JSON.stringify(form));
 	    fd.append("petId", form.mascotaID);
@@ -131,7 +133,6 @@ export default function AdoptionForm({ onSubmit }) {
         // si te paso un handler desde el padre
         await onSubmit(fd);
       } else {
-        // POST directo al backend (ajusta la URL a tu API)
         const token = localStorage.getItem("token");
         if(!token){
           console.warn("No hay access_token en localStorage")};
@@ -143,8 +144,8 @@ export default function AdoptionForm({ onSubmit }) {
         });
       }
 
-      setOkMsg("¡Solicitud enviada! Te contactaremos pronto!!");
-      // reset suave (conserva adjuntos opcionalmente)
+      setOkMsg(show({ title: "Éxito", message: "¡Solicitud enviada! Te contactaremos pronto!!", variant: "success" }));
+
 
 	  	const keepId = form.mascotaID;
       	e.target.reset();
@@ -160,8 +161,7 @@ export default function AdoptionForm({ onSubmit }) {
       	});
       setFiles({ idOficial: null, comprobante: null, extras: [] });
     } catch (err) {
-      console.error(err);
-      setErrMsg("Hubo un problema al enviar tu solicitud. Intenta de nuevo.");
+      setErrMsg(show({title:"Error", message:"Hubo un problema al enviar tu solicitud. Intenta de nuevo.", variant:"danger"}));
     } finally {
       setLoading(false);
     }
@@ -181,6 +181,28 @@ export default function AdoptionForm({ onSubmit }) {
         color: PALETTE.text,
       }}
     >
+      <div className="mx-auto max-w-6xl px-4 pt-4">
+          <div className="flex items-center justify-between mb-4 text-sm text-[#6b7076]">
+            <nav className="flex items-center gap-2">
+              <Link href="/adoptante" >
+                Panel
+              </Link>
+              <span aria-hidden>/</span>
+              <Link href={`/mascotas/${mascotaId}`} >
+                  Perfil
+              </Link>
+              <span aria-hidden>/</span>
+              <span className="font-medium">Solicitud de Adopción</span>
+            </nav>
+
+            <Link
+              href={`/mascotas/${mascotaId}`}
+              className="rounded-xl px-4 py-2 bg-[#fceae0] text-[#9f5b53] hover:bg-[#f8dfd2]"
+            >
+              <span>←</span> Volver
+            </Link>
+          </div>
+        </div>
       <div className="mx-auto max-w-4xl px-4">
         {/* Header */}
         <div className="text-center mb-8">
@@ -358,18 +380,6 @@ export default function AdoptionForm({ onSubmit }) {
               Al enviar aceptas que la información es verdadera y autorizas el contacto para seguimiento.
             </p>
           </section>
-
-          {/* Mensajes */}
-          {errMsg && (
-            <div className="rounded-md p-3 border" style={{ borderColor: PALETTE.warning, color: PALETTE.warning }}>
-              {errMsg}
-            </div>
-          )}
-          {okMsg && (
-            <div className="rounded-md p-3 border" style={{ borderColor: PALETTE.accent, color: PALETTE.accent }}>
-              {okMsg}
-            </div>
-          )}
 
           {/* Acciones */}
           <div className="flex items-center gap-3">

@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/FeedBack";
 
 export function useNuevaMascota() {
     const router = useRouter();
+    const { show } = useToast();
     const [formData, setFormData] = useState({
         nombre: "",
         especie: "perro",
@@ -42,7 +44,7 @@ export function useNuevaMascota() {
 
     const handleDetectarRaza = async () => {
         if (!imagen) {
-            setError("Por favor, sube una imagen primero");
+            setError(show({ title: "Error", message: "Por favor, selecciona una imagen primero.", variant: "danger" }));
             return;
         }
         setCargandoRaza(true);
@@ -67,7 +69,7 @@ export function useNuevaMascota() {
                 raza: razaPredicha,
             }));
         } catch (err) {
-            setError(err.message);
+            setError(show({ title: "Error", message: err.message || "Error al detectar la raza", variant: "danger" }));
         } finally {
             setCargandoRaza(false);
         }
@@ -92,10 +94,11 @@ export function useNuevaMascota() {
         });
 
         if (response.ok) {
+            show({ title: "Éxito", message: "Mascota registrada correctamente", variant: "success" });
             router.push("/veterinario");
         } else {
             const errorData = await response.json();
-            setError(errorData.detail || "Error al registrar la mascota");
+            setError(show({ title: "Error", message: errorData.detail, variant: "danger" }));
         }
     };
 
