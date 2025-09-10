@@ -40,7 +40,7 @@ export default function AdoptanteDashboard() {
       .catch(() => setError("Error al obtener mascotas"));
   }, [router]);
 
-  if (error) return <p>{error}</p>;
+  if (error) router.push("/login");
 
   return (
     <main>

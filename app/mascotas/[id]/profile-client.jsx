@@ -9,7 +9,7 @@ import UserChat from "@/components/UserChat";
 const BASE_WS = "ws://localhost:8001";
 
 export default function PetProfile({ mascota }) {
-  const { id, nombre, fotos, edad, sexo, raza, tamaño, descripcion, responsable } = mascota;
+  const { id, nombre, fotos, edad, especie, sexo, raza, tamaño, descripcion, responsable } = mascota;
 
   const [active, setActive] = useState(0);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -112,11 +112,23 @@ export default function PetProfile({ mascota }) {
               </div>
 
               {/* Chips */}
-              <div className="flex flex-wrap gap-2 mt-6">
-                <Chip>{edad ? `${edad} años` : "Edad -"}</Chip>
-                <Chip>{sexo || "Sexo -"}</Chip>
-                <Chip>{tamaño || "Tamaño -"}</Chip>
-                <Chip>{raza || "Raza -"}</Chip>
+              <div className="flex flex-wrap justify-between">
+                <div className="flex flex-wrap gap-2 mt-6 items-center">
+                  <Chip>{edad ? `${edad} años` : "Edad -"}</Chip>
+                  <Chip>{sexo || "Sexo -"}</Chip>
+                  <Chip>{tamaño || "Tamaño -"}</Chip>
+                  <Chip>{raza || "Raza -"}</Chip>
+                </div>
+
+                <div className="mt-6">
+                  <Link
+                      href={`/ar?type=${encodeURIComponent(especie)}&name=${encodeURIComponent(nombre ?? "")}`}
+                      target="_blank"
+                      className="inline-flex items-center px-4 py-2 rounded-2xl bg-[#7d9a75] text-white hover:bg-[#607859]"
+                  >
+                      Ver en tu espacio (AR beta)
+                  </Link>
+                </div>
               </div>
 
               {/* Descripción */}

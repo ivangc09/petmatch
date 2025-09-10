@@ -14,8 +14,8 @@ export default function VeterinarioDashboard() {
     const [token, setToken] = useState("");
     const [error, setError] = useState(null);
     
-      // Carga inicial + guardia de ruta
-      useEffect(() => {
+    useEffect(() => {
+        // Obtener token y tipo de usuario, redirigir si no es veterinario
         const t = localStorage.getItem("token");
         const tipo = localStorage.getItem("tipo_usuario");
     
@@ -26,46 +26,45 @@ export default function VeterinarioDashboard() {
     
         setTipoUsuario(tipo);
         setToken(t);
-    
-        // Carga inicial (sin filtros)
+
+        // Carga inicial de mascotas del veterinario
         fetch("http://localhost:8000/api/mascotas/mis-mascotas/", {
-          headers: { Authorization: `Bearer ${t}` },
+            headers: { Authorization: `Bearer ${t}` },
         })
-          .then((res) => {
+        .then((res) => {
             if (!res.ok) throw new Error(`Error ${res.status}`);
             return res.json();
-          })
-          .then((data) => setMascotas(Array.isArray(data) ? data : (data.results ?? [])))
-          .catch(() => setError("Error al obtener mascotas"));
-      }, [router]);
+        })
+        .then((data) => setMascotas(Array.isArray(data) ? data : (data.results ?? [])))
+        .catch(() => setError("Error al obtener mascotas"));
+    }, [router]);
     
-      if (error) return <p>{error}</p>;
+    if (error) router.push("/login");
     
-      return (
+    return (
         <main>
-          <Header />
+            <Header />
     
-          {/* El Hero ahora controla la búsqueda y manda resultados acá vía onResults */}
-          <Hero
-            apiBase="http://localhost:8000"
-            endpointPath="/api/mascotas/mis-mascotas/"
-            token={token}
-            onResults={(items) => setMascotas(items)}
-            titulo="Organiza a tus Pacientes"
-            subtitulo="Peludos"
-            texto="Gestiona y encuentra rápidamente a tus pacientes peludos. Cada perfil contiene información esencial para brindarles el mejor cuidado."
-          />
+            <Hero
+                apiBase="http://localhost:8000"
+                endpointPath="/api/mascotas/mis-mascotas/"
+                token={token}
+                onResults={(items) => setMascotas(items)}
+                titulo="Organiza a tus Pacientes"
+                subtitulo="Peludos"
+                texto="Gestiona y encuentra rápidamente a tus pacientes peludos. Cada perfil contiene información esencial para brindarles el mejor cuidado."
+            />
     
-          <SeccionMedia cantidadMascotas={mascotas.length} texto={"listas para adoptar"} />
-    
-          <div className="flex gap-4 justify-center flex-wrap bg-[#f6f5f3]">
-            {mascotas.map((mascota) => (
-              <div key={mascota.id} className="p-6 mb-4 max-w-md">
-                <PetCard mascota={mascota} tipoUsuario={tipoUsuario} />
-              </div>
-            ))}
-          </div>
+            <SeccionMedia cantidadMascotas={mascotas.length} texto={"listas para adoptar"} />
+        
+            <div className="flex gap-4 justify-center flex-wrap bg-[#f6f5f3]">
+                {mascotas.map((mascota) => (
+                    <div key={mascota.id} className="p-6 mb-4 max-w-md">
+                        <PetCard mascota={mascota} tipoUsuario={tipoUsuario} />
+                    </div>
+                ))}
+            </div>
     
         </main>
-      );
-    }
+    );
+}

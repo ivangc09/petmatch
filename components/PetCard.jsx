@@ -88,9 +88,26 @@ export default function PetCard({ mascota, tipoUsuario }) {
                     </div>
 
                 </div>
+
+                <div className="flex flex-wrap gap-2 m-4 items-center justify-center">
+                    <Chip color="#7d9a76">Social</Chip>
+                    <Chip color="#d47451">Vacunado</Chip>
+                    <Chip color="#7d9a76">Castrado</Chip>
+                    <Chip color="#d47451">Social</Chip>
+
+                </div>
                 <Botones tipoUsuario={tipoUsuario} idMascota={mascota.id} />     
             </div>
         </div>
     );
 
+}
+
+function Chip({ children, color}) {
+    return(
+        <span className={`px-3 py-1 rounded-full text-sm font-medium border text-white`}
+            style={{ backgroundColor: color }}>
+            {children}
+        </span>
+    )
 }
