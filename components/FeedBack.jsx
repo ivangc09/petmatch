@@ -111,7 +111,7 @@ export function ConfirmProvider({ children }) {
       {children}
 
       {/* Modal */}
-      <div className={`${open ? "" : "hidden"} fixed inset-0 z-[70] flex items-center justify-center`}> 
+      <div className={`${open ? "" : "hidden"} fixed inset-0 z-[1100] flex items-center justify-center`}> 
         <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
         <div className="relative z-10 w-[min(92vw,520px)] rounded-2xl bg-white p-6 shadow-2xl">
           <h3 className="text-lg font-semibold text-[#2b3136]">

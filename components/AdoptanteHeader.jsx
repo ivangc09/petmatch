@@ -1,10 +1,11 @@
 "use client";
 
-import { FaPaw, FaBell, FaComments } from "react-icons/fa";
+import { FaPaw, FaComments } from "react-icons/fa";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import BotonCerrarSesion from "@/components/BotonCerrarSesión";
 import UserChat from "@/components/UserChat";
+import Notification from "./Notificacion";
 
 export default function AdoptanteHeader() {
   const BASE_WS = process.env.NEXT_PUBLIC_WS_BASE || "ws://localhost:8001";
@@ -42,7 +43,7 @@ export default function AdoptanteHeader() {
 
       {/* Menú */}
       <div className='font-["Poppins"] ml-auto flex items-center gap-4'>
-        <FaBell size={24} className="text-[#7d8181] hover:text-[#D3764C] cursor-pointer" />
+        <Notification token={token} />
 
         {/* Botón de chat (abre el panel correcto) */}
         <button
