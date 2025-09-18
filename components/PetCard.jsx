@@ -38,6 +38,22 @@ export default function PetCard({ mascota, tipoUsuario }) {
     .trim()
     .toLowerCase();
 
+    const humor = mascota.jugueton ? "Jugueton" : "Tranquilo";
+    const conviveOtrasMascotas = mascota.convive_otras_mascotas ? "Convive con mascotas" : "No convive con mascotas"
+    const conviveNinos = mascota.convive_ninos ? "Convive con niños" : "No convive con niños"
+    let energia = ""
+
+    if(mascota.nivel_energia === "alto"){
+        energia = "Activo"
+    }
+    else if(mascota.nivel_energia === "medio"){
+        energia = "Algo Activo"
+    }
+    else{
+        energia = "Poco Activo"
+    }
+
+
     const estadoClr = {
         disponible: "bg-[#7d9a75]",
         adoptado: "bg-[#e0795e]",
@@ -89,11 +105,11 @@ export default function PetCard({ mascota, tipoUsuario }) {
 
                 </div>
 
-                <div className="flex flex-wrap gap-2 m-4 items-center justify-center">
-                    <Chip color="#7d9a76">Social</Chip>
-                    <Chip color="#d47451">Vacunado</Chip>
-                    <Chip color="#7d9a76">Castrado</Chip>
-                    <Chip color="#d47451">Social</Chip>
+                <div className="flex flex-wrap gap-4 m-4 items-center justify-center">
+                    <Chip color="#7d9a76">{humor || "-"}</Chip>
+                    <Chip color="#d47451">{conviveOtrasMascotas || "-"}</Chip>
+                    <Chip color="#d47451">{energia || "-"}</Chip>
+                    <Chip color="#7d9a76">{conviveNinos || "-"}</Chip>
 
                 </div>
                 <Botones tipoUsuario={tipoUsuario} idMascota={mascota.id} />     

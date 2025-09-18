@@ -162,15 +162,6 @@ export default function EditPetForm({ mascota }) {
                                         {saving ? "Guardando..." : "Guardar cambios"}
                                     </button>
                                 </div>
-
-                                {ok &&(
-                                    <div className="mb-4 rounded-md border border-green-300 bg-green-50 px-4 py-3 text-green-800">
-                                        Cambios guardados. <Link href={`/mascotas/${mascota.id}`} className="underline ml-1">Ver perfil</Link>
-                                    </div>
-                                )}
-                                {error && (
-                                    <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-red-800">{error}</div>
-                                )}
                             </form>
                         </div>
                     </div>
