@@ -31,7 +31,7 @@ export default function PerfilView({
       </header>
     <div className="rounded-3xl overflow-hidden border border-black/5 shadow-[0_12px_40px_rgba(0,0,0,0.08)] bg-white">
       {/* Banner */}
-      <div className="h-28 w-full bg-gradient-to-r from-[#fff6f1] to-[#fdeee7]" />
+      <div className="h-28 w-full bg-[#f8d9cc]" />
 
       {/* Header: Avatar + Título */}
       <div className="px-6 md:px-10 -mt-16 relative">
@@ -77,12 +77,12 @@ export default function PerfilView({
               <h1 className="text-3xl md:text-4xl font-bold text-gray-800 font-[Inter]">
                 Bienvenido de vuelta,<span className="font-[Dancing_Script] text-[#df7a5e] text-4xl md:text-5xl"> {perfil?.username}</span>
               </h1>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full border ${roleColor} text-sm font-medium`}>
+              <span className={`inline-flex items-center px-3 py-1 rounded-full border ${roleColor} text-sm font-medium mt-4`}>
                 {roleLabel}
               </span>
             </div>
             <p className="mt-3 font-[Inter] text-gray-600 text-base md:text-lg max-w-3xl">
-              Detrás de cada mascota feliz hay una persona como tú, lista para dar amor. Gracias por hacer que más colitas se muevan 🐾
+              Detrás de cada mascota feliz hay una persona como tú, lista para dar amor. Gracias por hacer que más colitas se muevan
             </p>
           </div>
 
@@ -188,7 +188,7 @@ function InfoCard({ color = "green", value = "-", label = "" }) {
   const Icon = getIconForLabel(label);
 
   return (
-    <div className={`${p.bg} rounded-2xl p-4 shadow-sm ring-1 ${p.ring}`}>
+    <div className={`${p.bg} rounded-2xl p-4 shadow-sm ring-1 ${p.ring} mt-4`}>
       <div className="flex items-center gap-3">
         <div className={`size-10 rounded-xl bg-white/80 border border-black/5 flex items-center justify-center`}>
           <Icon size={18} className={p.text} />

@@ -8,7 +8,7 @@ import VeterinarioHeader from "@/components/VeterinarioHeader";
 import AdoptanteHeader from "@/components/AdoptanteHeader";
 
 export default function PerfilPage() {
-  const { perfil, loading, mensaje, setMensaje, saving, uploading, saveProfile, saveAvatar } = useProfile();
+  const { perfil, loading, mensaje, setMensaje, saving, uploading, saveProfile, saveAvatar, petsCount, loadingPetsCount } = useProfile();
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({ username: "", ciudad: "", telefono: "" });
 
@@ -59,7 +59,7 @@ export default function PerfilPage() {
       { color: "salmon", value: p?.telefono || "-", label: "Teléfono" },
     ];
     if (p?.tipo_usuario === "adoptante") base.push({ color:"green", value:p?.mascotas_adoptadas ?? 0, label:"Mascotas adoptadas" });
-    else if (p?.tipo_usuario === "veterinario") base.push({ color:"green", value:p?.mascotas_publicadas ?? 0, label:"Mascotas publicadas" });
+    else if (p?.tipo_usuario === "veterinario") base.push({ color:"green",  value: loadingPetsCount ? "-" : petsCount, label:"Mascotas publicadas" });
     return base;
   };
 

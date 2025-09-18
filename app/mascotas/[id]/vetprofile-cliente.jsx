@@ -115,12 +115,12 @@ export default function VetPetProfile( { mascota } ) {
                         {/* Columna principal */}
                         <section className="lg:col-span-2">
                             {/* Galería */}
-                            <div className="rounded-2xl overflow-hidden shadow-lg bg-white">
-                            <img
-                                src={mainImg}
-                                alt={`Foto de ${nombre}`}
-                                className="w-full h-[360px] md:h-[440px] object-center"
-                            />
+                            <div className="rounded-2xl overflow-hidden shadow-lg bg-white aspect-[4/3] md:aspect-[16/10]">
+                                <img
+                                    src={mainImg}
+                                    alt={`Foto de ${nombre}`}
+                                    className="w-full h-full object-center"
+                                />
                             {Array.isArray(fotos) && fotos.length > 1 && (
                             <div className="flex gap-3 p-4 overflow-x-auto">
                                 {fotos.map((src, i) => (

@@ -91,7 +91,7 @@ export default function PetProfile({ mascota }) {
                 <img
                   src={mainImg}
                   alt={`Foto de ${nombre}`}
-                  className="w-full h-[360px] md:h-[440px] object-center object-cover"
+                  className="w-full h-[360px] md:h-[440px] object-center"
                 />
                 {Array.isArray(fotos) && fotos.length > 1 && (
                   <div className="flex gap-3 p-4 overflow-x-auto">

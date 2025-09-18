@@ -7,3 +7,4 @@ export const uploadAvatar  = (file) => {
     fd.append("foto_perfil", file);
     return apiFetch("/api/auth/mi-perfil/", { method:"PATCH", formData: fd });
 };
+export const getPetsCount = () => apiFetch("/api/mascotas/mascotas-registradas/");
