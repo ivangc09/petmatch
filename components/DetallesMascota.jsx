@@ -18,7 +18,8 @@ export default function DetallesMascota({ mascota }) {
 
         const token = localStorage.getItem("token");
         try {
-            const response = await fetch("http://localhost:8000/api/mascotas/solicitudes/upload/", {
+            const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+            const response = await fetch(`${API_BASE}/api/mascotas/solicitudes/upload/`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${token}`,

@@ -6,7 +6,7 @@ import Comentarios from "@/components/Comentarios";
 import Chatbot from "@/components/Chatbot";
 import UserChat from "@/components/UserChat";
 
-const BASE_WS = "ws://localhost:8001";
+const BASE_WS = process.env.NEXT_PUBLIC_WS_BASE || "ws://localhost:8001";
 
 export default function PetProfile({ mascota }) {
   const { id, nombre, fotos, edad, especie, sexo, raza, tamaño, descripcion, responsable } = mascota;

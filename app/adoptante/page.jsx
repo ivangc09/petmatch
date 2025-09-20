@@ -15,6 +15,8 @@ export default function AdoptanteDashboard() {
   const [token, setToken] = useState("");
   const [error, setError] = useState(null);
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+
   // Carga inicial + guardia de ruta
   useEffect(() => {
     const t = localStorage.getItem("token");
@@ -29,7 +31,7 @@ export default function AdoptanteDashboard() {
     setToken(t);
 
     // Carga inicial (sin filtros)
-    fetch("http://localhost:8000/api/mascotas/ver-mascotas/", {
+    fetch(`${API_BASE}/api/mascotas/ver-mascotas/`, {
       headers: { Authorization: `Bearer ${t}` },
     })
       .then((res) => {

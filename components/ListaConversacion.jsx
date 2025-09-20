@@ -15,7 +15,8 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
     const run = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:8000/api/chat/conversations/", {
+        const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+        const res = await fetch(`${base}/api/chat/conversations/`, {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });

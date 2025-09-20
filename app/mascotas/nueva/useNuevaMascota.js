@@ -6,6 +6,7 @@ import { useToast } from "@/components/FeedBack";
 export function useNuevaMascota() {
     const router = useRouter();
     const { show } = useToast();
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
     const EXCEPTIONS = {
         "Maine_Coon": "Maine Coon","keeshond": "Keeshond","basset_hound": "Basset Hound","samoyed": "Samoyedo","boxer": "Bóxer",
@@ -156,7 +157,7 @@ export function useNuevaMascota() {
             data.append("fotos", imagen);
         }
 
-        const response = await fetch("http://localhost:8000/api/mascotas/crear/", {
+        const response = await fetch(`${API_BASE}/api/mascotas/crear/`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
             body: data,

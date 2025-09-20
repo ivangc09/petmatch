@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 export default function Comentarios({ mascotaId }) {
     const [comentarios, setComentarios] = useState([]);
     const [nuevoComentario, setNuevoComentario] = useState("");
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
     useEffect(() => {
-        fetch(`http://localhost:8000/api/mascotas/comentarios/${mascotaId}/`)
+        fetch(`${API_BASE}/api/mascotas/comentarios/${mascotaId}/`)
             .then(res => res.json())
             .then(data => setComentarios(data));
     }, [mascotaId]);
 
     const enviarComentario = async () => {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:8000/api/mascotas/comentarios/crear/", {
+        const response = await fetch(`${API_BASE}/api/mascotas/comentarios/crear/`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

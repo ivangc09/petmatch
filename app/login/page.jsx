@@ -7,11 +7,12 @@ export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
     const handleLogin = async (e) => {
         e.preventDefault();
 
-        const response = await fetch("http://localhost:8000/api/auth/custom-login/", {
+        const response = await fetch(`${API_BASE}/api/auth/custom-login/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password }),

@@ -13,6 +13,7 @@ export default function VeterinarioDashboard() {
     const [tipoUsuario, setTipoUsuario] = useState("");
     const [token, setToken] = useState("");
     const [error, setError] = useState(null);
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
     
     useEffect(() => {
         // Obtener token y tipo de usuario, redirigir si no es veterinario
@@ -28,7 +29,7 @@ export default function VeterinarioDashboard() {
         setToken(t);
 
         // Carga inicial de mascotas del veterinario
-        fetch("http://localhost:8000/api/mascotas/mis-mascotas/", {
+        fetch(`${API_BASE}/api/mascotas/mis-mascotas/`, {
             headers: { Authorization: `Bearer ${t}` },
         })
         .then((res) => {
@@ -46,7 +47,7 @@ export default function VeterinarioDashboard() {
             <Header />
     
             <Hero
-                apiBase="http://localhost:8000"
+                apiBase={API_BASE}
                 endpointPath="/api/mascotas/mis-mascotas/"
                 token={token}
                 onResults={(items) => setMascotas(items)}

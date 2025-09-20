@@ -5,7 +5,7 @@ import { BiReset } from "react-icons/bi";
 
 
 export default function Hero({
-  apiBase = "http://localhost:8000",
+  apiBase = "",
   endpointPath = "",
   token = "",
   onResults = () => {},

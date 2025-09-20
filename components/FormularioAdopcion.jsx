@@ -134,9 +134,10 @@ export default function AdoptionForm({ onSubmit }) {
         await onSubmit(fd);
       } else {
         const token = localStorage.getItem("token");
+        const base = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
         if(!token){
           console.warn("No hay access_token en localStorage")};
-        await fetch("http://localhost:8000/api/mascotas/solicitudes/upload/", {
+        await fetch(`${base}/api/mascotas/solicitudes/upload/`, {
           method: "POST",
           body: fd,
           headers: {...(token ? { Authorization: `Bearer ${token}` } : {}),

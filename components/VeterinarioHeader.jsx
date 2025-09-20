@@ -3,9 +3,8 @@ import { FaPaw, FaBell, FaComments } from "react-icons/fa";
 import Link from "next/link";
 import BotonCerrarSesion from "@/components/BotonCerrarSesión";
 import { useEffect, useState } from "react";
-import UserChat from "@/components/UserChat"; // ajusta la ruta si lo guardaste en otro lado
+import UserChat from "@/components/UserChat";
 
-// Fija tu WS local o usa env var en prod
 const BASE_WS = process.env.NEXT_PUBLIC_WS_BASE || "ws://localhost:8001";
 
 export default function VeterinarioHeader() {
@@ -24,7 +23,7 @@ export default function VeterinarioHeader() {
     } catch {}
     const t = localStorage.getItem("token");
     if (t) setToken(t);
-  }, []); // 👈 importante el arreglo de dependencias
+  }, []);
 
   return (
     <>
@@ -93,7 +92,7 @@ export default function VeterinarioHeader() {
 
               {token ? (
                 <UserChat
-                  currentUserId={currentUserId ?? -1} // si aún no tienes el id, igual funciona
+                  currentUserId={currentUserId ?? -1}
                   token={token}
                   baseWs={BASE_WS}
                   // sin initialPeer → abre la bandeja para elegir conversación

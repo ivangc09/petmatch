@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-/**
- * Hook de WS para DMs
- * Params:
- * - baseWs: ws://host:port
- * - token: JWT (string)
- * - peerId: número/id del peer
- * - onMessage?: function(msg)  // ← NUEVO: callback por cada mensaje recibido ya parseado
- */
 export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
   const [ready, setReady] = useState(false);
   const [liveMessages, setLiveMessages] = useState([]);
