@@ -117,7 +117,7 @@ export function useNuevaMascota() {
                 data.append("file", imagen);
 
                 const res = await fetch(
-                "https://clasificadormascotas-production.up.railway.app/clasificar",
+                "https://clasificadormascotas-production.up.railway.app/clasificar/",
                 { method: "POST", body: data }
                 );
 
