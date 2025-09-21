@@ -56,6 +56,9 @@ export default function useNotificationsWS({
             origin = scheme + window.location.host;
         }
 
+        const jwt = String(token).split(" ").pop();
+        const url = `${origin}/ws/notifications/?token=${encodeURIComponent(jwt)}`;
+
         const ws = new WebSocket(url);
         wsRef.current = ws;
 
