@@ -32,25 +32,28 @@ export default function useNotificationsWS({
 
     const connect = useCallback(() => {
         if (!enabled || !token) return;
-        
+
         const thisAttempt = ++attemptIdRef.current;
         shouldCloseRef.current = false;
-        
-        const base = process.env.NEXT_PUBLIC_WS_BASE;
-        const protocol = (base || window.location.protocol).startsWith("https") ? "wss" : "ws";
-        const host = (base ? base.replace(/^wss?:\/\//, "").replace(/\/+$/, "") : window.location.host);
-        
-        const jwt = String(token).split(" ").pop();
-        const url = `${protocol}://${host}/ws/notifications/?token=${encodeURIComponent(jwt)}`;
-        
-        clearTimers();
-        const prev = wsRef.current;
-        if (prev) {
-            if (prev.readyState === WebSocket.CONNECTING) {
-                shouldCloseRef.current = true;
+
+        const rawBase = (process.env.NEXT_PUBLIC_WS_BASE || "").trim().replace(/\/+$/, "");
+        let origin;
+        if (rawBase) {
+            if (/^wss?:\/\//i.test(rawBase)) {
+                origin = rawBase;
+            } else if (/^https?:\/\//i.test(rawBase)) {
+                // Viene como http(s)://host → mapea a ws(s)://host
+                const u = new URL(rawBase);
+                origin = (u.protocol === "https:" ? "wss://" : "ws://") + u.host;
             } else {
-                try { prev.close(1000, "reconnect"); } catch {}
+                // Solo host (sin esquema) → decide por el contexto del navegador
+                const scheme = (typeof window !== "undefined" && window.location.protocol === "https:") ? "wss://" : "ws://";
+                origin = scheme + rawBase;
             }
+        } else {
+            // Sin variable → cae al host actual del navegador
+            const scheme = (typeof window !== "undefined" && window.location.protocol === "https:") ? "wss://" : "ws://";
+            origin = scheme + window.location.host;
         }
 
         const ws = new WebSocket(url);

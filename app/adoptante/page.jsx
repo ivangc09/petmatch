@@ -50,7 +50,7 @@ export default function AdoptanteDashboard() {
 
       {/* El Hero ahora controla la búsqueda y manda resultados acá vía onResults */}
       <Hero
-        apiBase="http://localhost:8000"
+        apiBase={API_BASE}
         endpointPath="/api/mascotas/ver-mascotas/"
         token={token}
         onResults={(items) => setMascotas(items)}
