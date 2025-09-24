@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useToast } from "@/components/FeedBack";
 
 export default function LoginPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const router = useRouter();
+    const { show } = useToast();
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
     const handleLogin = async (e) => {
@@ -30,8 +32,12 @@ export default function LoginPage() {
 
             router.push("/dashboard");
         } else {
-            console.error("Error al iniciar sesión", data);
-            alert("Credenciales incorrectas");
+            if (data.error === "Invalid credentials") {
+                show({ title: "Error", message: "Credenciales Incorrectas", variant: "error" });
+            }
+            else{
+                show({ title: "Error", message: "Error en el inicio de sesión", variant: "error" });
+            }
         }
     };
 
