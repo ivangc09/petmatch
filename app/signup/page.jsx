@@ -47,6 +47,7 @@ export default function RegistroPage() {
     setError(null);
 
     try {
+        console.log("SIGNUP payload >>>", formData)
         const response = await fetch(`${API_BASE}/api/auth/registration/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
