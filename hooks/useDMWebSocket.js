@@ -31,17 +31,20 @@ export default function useDMWebSocket({
     wsRef.current = ws;
 
     ws.onopen = () => {
+      console.log("[WS] OPEN", url);
       setReady(true);
       if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (e) => {
+      console.log("[WS] CLOSE", e.code, e.reason);
       setReady(false);
       if (retryRef.current) clearTimeout(retryRef.current);
       retryRef.current = setTimeout(connect, 1500);
     };
 
-    ws.onerror = () => {
+    ws.onerror = (e) => {
+      console.log("[WS] ERROR", e);
       try { ws.close(); } catch {}
     };
 
