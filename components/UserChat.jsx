@@ -7,10 +7,6 @@ import ListaMensajes from "./ListaMensajes";
 import InputMensaje from "./InputMensaje";
 import useDMWebSocket from "@/hooks/useDMWebSocket";
 
-const DEFAULT_WS =
-  (typeof window !== "undefined" && process.env.NEXT_PUBLIC_WS_BASE) ||
-  "ws://localhost:8001";
-
 const API_BASE =
   (typeof window !== "undefined" && process.env.NEXT_PUBLIC_API_BASE) ||
   "http://localhost:8000";
@@ -19,10 +15,13 @@ function makeClientId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Props extra (opcionales) para abrir directo una conversación:
+ * - initialPeerId: number | string
+ */
 export default function UserChat({
   currentUserId,
   token,
-  wsBase = DEFAULT_WS,
   initialPeerId,
 }) {
   const me = currentUserId != null ? Number(currentUserId) : null;
@@ -129,8 +128,8 @@ export default function UserChat({
     });
   };
 
+  // ⬇️ NO pasamos baseWs para evitar el TDZ; el hook usa su default interno
   const { ready, sendPayload, resetLive } = useDMWebSocket({
-    baseWs: wsBase,
     token,
     peerId,
     onMessage: onWsMessage,

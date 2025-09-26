@@ -6,7 +6,6 @@ import Comentarios from "@/components/Comentarios";
 import Chatbot from "@/components/Chatbot";
 import UserChat from "@/components/UserChat";
 
-const BASE_WS = process.env.NEXT_PUBLIC_WS_BASE || "ws://localhost:8001";
 
 export default function PetProfile({ mascota }) {
   const { id, nombre, fotos, edad, especie, sexo, raza, tamaño, descripcion, responsable } = mascota;
@@ -187,7 +186,6 @@ export default function PetProfile({ mascota }) {
                   <UserChat
                     currentUserId={currentUserId ?? -1} // si no hay id, igual funcionará; “mine” no se marcará
                     token={token}
-                    baseWs={BASE_WS}
                     initialPeer={initialPeer}
                   />
                 ) : (
