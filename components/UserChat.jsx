@@ -35,17 +35,6 @@ function resolveInitialPeerId(initialPeerIdProp) {
   return null;
 }
 
-/* =========================
-   🔐 Candado global por pestaña
-   ========================= */
-const ACTIVE_KEY = "__pm_uc_active_instance";
-function setActiveInstance(key) {
-  try { window[ACTIVE_KEY] = key; } catch {}
-}
-function getActiveInstance() {
-  try { return window[ACTIVE_KEY]; } catch { return null; }
-}
-
 export default function UserChat({
   currentUserId,
   token,
@@ -60,7 +49,6 @@ export default function UserChat({
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convRefreshTick, setConvRefreshTick] = useState(0);
-  const [pollingActive, setPollingActive] = useState(false);
 
   const processedRef = useRef(new Set());        // "id:XX" | "cid:YY"
   const lastIdsRef = useRef(new Set());          // ids vistos
@@ -68,26 +56,9 @@ export default function UserChat({
   const mountedRef = useRef(true);
   const bootedRef = useRef(false);
 
-  // clave única para esta instancia (para el lock)
-  const instanceKeyRef = useRef(`uc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`);
-
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
-  }, []);
-
-  // Tomar control como instancia activa al montar
-  useEffect(() => {
-    setActiveInstance(instanceKeyRef.current);
-    // Aviso si ya hay otra instancia activa
-    if (getActiveInstance() && getActiveInstance() !== instanceKeyRef.current) {
-      console.warn("[UserChat] Otra instancia activa detectada; esta quedará pasiva.");
-    }
-    return () => {
-      if (getActiveInstance() === instanceKeyRef.current) {
-        setActiveInstance(null);
-      }
-    };
   }, []);
 
   // Bootstrap: fija peerId al montar (prop / URL / localStorage)
@@ -120,24 +91,8 @@ export default function UserChat({
     };
   };
 
-  // Heurística para dedupe (doble creación WS+POST en ~3s)
-  const isLikelyDuplicateMine = (a, b) => {
-    try {
-      if (!a || !b) return false;
-      if (!a.text || !b.text) return false;
-      if (!(a.created_at && b.created_at)) return false;
-      if (!(a.mine && b.mine)) return false;
-      if (a.text !== b.text) return false;
-      const dt = Math.abs(new Date(a.created_at) - new Date(b.created_at));
-      return dt < 3000;
-    } catch { return false; }
-  };
-
   // WS: sólo aceptamos mensajes del peer actual (entrantes o salientes)
   const onWsMessage = (msg) => {
-    // ⛔️ Si no soy la instancia activa, no proceso
-    if (getActiveInstance() !== instanceKeyRef.current) return;
-
     const normalized = normalizeMsg(msg);
     if (!normalized) return;
 
@@ -147,45 +102,26 @@ export default function UserChat({
       (rec != null && Number(rec) === Number(peerId));
     if (!isForThisPeer) return;
 
-    // Ignorar eco de mis propios mensajes si ya registré el client_id
-    if (normalized.client_id && lastClientIdsRef.current.has(normalized.client_id)) {
-      return;
-    }
-
-    // Evitar duplicados por id/cid ya procesados
     const sidKey = normalized.id ? `id:${normalized.id}` : null;
     const cidKey = normalized.client_id ? `cid:${normalized.client_id}` : null;
     if (sidKey && processedRef.current.has(sidKey)) return;
     if (cidKey && processedRef.current.has(cidKey)) return;
 
-    // Heurística: si ya hay un “mío” igual en ventana de 3s, ignora
-    if (normalized.mine) {
-      const dupMine = history.some(h => isLikelyDuplicateMine(h, normalized));
-      if (dupMine) return;
-    }
+    if (normalized.id) lastIdsRef.current.add(normalized.id);
+    if (normalized.client_id) lastClientIdsRef.current.add(normalized.client_id);
 
-    // Marcar vistos
-    if (normalized.id) {
-      lastIdsRef.current.add(normalized.id);
-      processedRef.current.add(`id:${normalized.id}`);
-    }
-    if (normalized.client_id) {
-      lastClientIdsRef.current.add(normalized.client_id);
-      processedRef.current.add(`cid:${normalized.client_id}`);
-    }
-
-    // Agregar al historial
     setHistory((prev) => [...prev, normalized]);
+
+    if (sidKey) processedRef.current.add(sidKey);
+    if (cidKey) processedRef.current.add(cidKey);
   };
 
-  // ⬅️ Conéctate al canal del PEER (tu backend lo espera así)
+  // Suscríbete al canal del usuario logueado (quien debe recibir)
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
-    peerId,
+    channelUserId: currentUserId,
     onMessage: onWsMessage,
   });
-
-  const live = ready || pollingActive;
 
   async function fetchMessagesJSON(opts) {
     const base = API_BASE.replace(/\/+$/, "");
@@ -251,13 +187,8 @@ export default function UserChat({
     run();
 
     // Polling cada 3s cuando la pestaña esté visible
-    setPollingActive(true);
     intervalId = setInterval(async () => {
-      // ⛔️ si no soy la instancia activa, no hago polling
-      if (getActiveInstance() !== instanceKeyRef.current) return;
-
       if (!canPoll()) return;
-
       try {
         const base = API_BASE.replace(/\/+$/, "");
         const res = await fetch(`${base}/api/chat/messages/?peer_id=${peerId}`, {
@@ -271,84 +202,22 @@ export default function UserChat({
         const data = await res.json();
         if (!Array.isArray(data)) return;
 
-        // Normalizamos entrantes
-        const incoming = data.map(normalizeMsg).filter(Boolean);
+        const normalized = data
+          .map((m) => normalizeMsg(m))
+          .filter(Boolean)
+          .filter((m) => {
+            if (m.id && lastIdsRef.current.has(m.id)) return false;
+            if (m.client_id && lastClientIdsRef.current.has(m.client_id)) return false;
+            return true;
+          });
 
-        // Reconciliar contra el historial actual
-        setHistory((prev) => {
-          if (!prev?.length && !incoming?.length) return prev;
-
-          const next = [...prev];
-
-          for (const m of incoming) {
-            const idSeen = m.id && lastIdsRef.current.has(m.id);
-            if (idSeen) continue;
-
-            // 1) Si trae client_id y hay un optimista sin id => REEMPLAZAR
-            if (m.client_id) {
-              const idxOpt = next.findIndex(
-                (x) => x.client_id === m.client_id && (x.id == null)
-              );
-              if (idxOpt >= 0) {
-                next[idxOpt] = m;
-                lastClientIdsRef.current.add(m.client_id);
-                processedRef.current.add(`cid:${m.client_id}`);
-                if (m.id) {
-                  lastIdsRef.current.add(m.id);
-                  processedRef.current.add(`id:${m.id}`);
-                }
-                continue;
-              }
-            }
-
-            // 2) Heurística por texto + timestamp cercano
-            const idxHeur = next.findIndex(
-              (x) =>
-                x.id == null &&
-                !!x.client_id &&
-                x.text === m.text &&
-                Math.abs(new Date(x.created_at) - new Date(m.created_at)) < 3000
-            );
-            if (idxHeur >= 0) {
-              next[idxHeur] = { ...m, client_id: next[idxHeur].client_id };
-              if (m.client_id) {
-                lastClientIdsRef.current.add(m.client_id);
-                processedRef.current.add(`cid:${m.client_id}`);
-              }
-              if (m.id) {
-                lastIdsRef.current.add(m.id);
-                processedRef.current.add(`id:${m.id}`);
-              }
-              continue;
-            }
-
-            // 3) Heurística extra: si parece duplicado mío, saltar
-            if (m.mine && next.some(x => isLikelyDuplicateMine(x, m))) {
-              if (m.id) {
-                lastIdsRef.current.add(m.id);
-                processedRef.current.add(`id:${m.id}`);
-              }
-              continue;
-            }
-
-            // 4) Si no hay duplicado, agregar como nuevo
-            const dupById = m.id && next.some((x) => x.id === m.id);
-            const dupByCid = m.client_id && next.some((x) => x.client_id === m.client_id);
-            if (!dupById && !dupByCid) {
-              next.push(m);
-              if (m.id) {
-                lastIdsRef.current.add(m.id);
-                processedRef.current.add(`id:${m.id}`);
-              }
-              if (m.client_id) {
-                lastClientIdsRef.current.add(m.client_id);
-                processedRef.current.add(`cid:${m.client_id}`);
-              }
-            }
-          }
-
-          return next;
-        });
+        if (normalized.length > 0) {
+          normalized.forEach((m) => {
+            if (m.id) { lastIdsRef.current.add(m.id); processedRef.current.add(`id:${m.id}`); }
+            if (m.client_id) { lastClientIdsRef.current.add(m.client_id); processedRef.current.add(`cid:${m.client_id}`); }
+          });
+          setHistory((prev) => [...prev, ...normalized]);
+        }
       } catch {}
     }, 3000);
 
@@ -356,14 +225,10 @@ export default function UserChat({
       ignore = true;
       controller.abort();
       if (intervalId) clearInterval(intervalId);
-      setPollingActive(false);
     };
   }, [token, peerId, conversationId, resetLive]);
 
   const handleSend = async (text) => {
-    // ⛔️ Si no soy la instancia activa, no envío (para evitar doble envío)
-    if (getActiveInstance() !== instanceKeyRef.current) return;
-
     if (!text?.trim() || !peerId || currentUserId == null) return;
 
     const clientId = makeClientId();
@@ -423,12 +288,14 @@ export default function UserChat({
       console.warn("Error POST /messages/:", e);
     }
 
-    // Empuje por WS (tu consumer espera action:"send" y toma peer de la URL)
+    // Empuje por WS (opcional). Incluye destinatario explícito.
     try {
       sendPayload({
-        action: "send",
+        type: "message",     // o action: "send" según tu consumer
         text,
         client_id: clientId,
+        peer_id: peerId,
+        recipient: peerId,
       });
     } catch {}
   };
@@ -465,8 +332,8 @@ export default function UserChat({
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${ (ready || pollingActive) ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
-                {(ready || pollingActive) ? "En vivo" : "Conectando…"}
+                <span className={`h-2 w-2 rounded-full ${ready ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
+                {ready ? "Conectado" : "Conectando…"}
               </div>
             </div>
 
