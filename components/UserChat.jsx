@@ -114,7 +114,7 @@ export default function UserChat({
   // Hook WS (usa default interno para la URL base)
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
-    peerId,
+    channelUserId: currentUserId,
     onMessage: onWsMessage,
   });
 
@@ -221,7 +221,7 @@ export default function UserChat({
 
     // Empuje WS opcional
     try {
-      sendPayload({ type: "message", text, client_id: clientId });
+      sendPayload({ type: "message", text, client_id: clientId, peer_id: peerId, recipient: peerId });
     } catch {}
   };
 

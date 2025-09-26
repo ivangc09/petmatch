@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export default function useDMWebSocket({
   baseWs = (typeof window !== "undefined" && process.env.NEXT_PUBLIC_WS_BASE) || "ws://localhost:8001",
   token,
-  peerId,
+  channelUserId,   // 👈 ID del usuario LOGUEADO (quien escucha)
   onMessage,
 }) {
   const [ready, setReady] = useState(false);
@@ -14,16 +14,14 @@ export default function useDMWebSocket({
 
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
-  // Normaliza baseWs → ws(s)://... (sin doble slash)
   const buildUrl = useCallback(() => {
-    if (!baseWs || !token || !peerId) return null;
-    const base = baseWs.replace(/\/+$/, ""); // sin slash final
-    const url = `${base}/ws/chat/u/${encodeURIComponent(peerId)}/?token=${encodeURIComponent(String(token).split(" ").pop())}`;
-    // Forzar ws:// o wss:// si viene http(s)://
-    if (url.startsWith("http://")) return "ws://" + url.slice(7);
-    if (url.startsWith("https://")) return "wss://" + url.slice(8);
+    if (!baseWs || !token || !channelUserId) return null;
+    const base = baseWs.replace(/\/+$/, "");
+    let url = `${base}/ws/chat/u/${encodeURIComponent(channelUserId)}/?token=${encodeURIComponent(String(token).split(" ").pop())}`;
+    if (url.startsWith("http://")) url = "ws://" + url.slice(7);
+    if (url.startsWith("https://")) url = "wss://" + url.slice(8);
     return url;
-  }, [baseWs, token, peerId]);
+  }, [baseWs, token, channelUserId]);
 
   const connect = useCallback(() => {
     const url = buildUrl();
@@ -39,7 +37,6 @@ export default function useDMWebSocket({
 
     ws.onclose = () => {
       setReady(false);
-      // reconexión simple
       if (retryRef.current) clearTimeout(retryRef.current);
       retryRef.current = setTimeout(connect, 1500);
     };
@@ -51,16 +48,14 @@ export default function useDMWebSocket({
     ws.onmessage = (evt) => {
       try {
         const data = JSON.parse(evt.data);
-        // El DMConsumer envía: { type: "message", payload: {...} }
+
+        // Formatos típicos:
+        // {type:"message", payload:{...}}  |  {...} directo  |  [ ... ]
         if (data && data.type === "message" && data.payload) {
           setLiveMessages((prev) => [...prev, data.payload]);
           onMessageRef.current?.(data.payload);
           return;
         }
-        // Presencia (opcional)
-        if (data && data.type === "presence") return;
-
-        // Fallbacks
         if (Array.isArray(data)) {
           setLiveMessages((prev) => [...prev, ...data]);
           data.forEach((m) => onMessageRef.current?.(m));
@@ -71,10 +66,9 @@ export default function useDMWebSocket({
           onMessageRef.current?.(data);
         }
       } catch {
-        // no-JSON: ignorar
+        // no JSON; ignorar
       }
     };
-
   }, [buildUrl]);
 
   useEffect(() => {
@@ -86,15 +80,6 @@ export default function useDMWebSocket({
     };
   }, [connect]);
 
-  const sendText = useCallback((text) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== 1) return false; // 1 = OPEN
-    const body = { action: "send", text: String(text ?? "").trim() };
-    if (!body.text) return false;
-    ws.send(JSON.stringify(body));
-    return true;
-  }, []);
-
   const sendPayload = useCallback((payload) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== 1) return false;
@@ -104,5 +89,5 @@ export default function useDMWebSocket({
 
   const resetLive = useCallback(() => setLiveMessages([]), []);
 
-  return { ready, liveMessages, sendText, sendPayload, resetLive };
+  return { ready, liveMessages, sendPayload, resetLive };
 }
