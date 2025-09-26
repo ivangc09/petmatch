@@ -15,6 +15,10 @@ function makeClientId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/**
+ * Props extra (opcionales) para abrir directo una conversación:
+ * - initialPeerId: number | string
+ */
 export default function UserChat({
   currentUserId,
   token,
@@ -29,6 +33,7 @@ export default function UserChat({
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [convRefreshTick, setConvRefreshTick] = useState(0); // ⬅️ para refrescar lista izquierda
 
   const processedRef = useRef(new Set());
   const mountedRef = useRef(true);
@@ -82,7 +87,7 @@ export default function UserChat({
   };
 
   const onWsMessage = (msg) => {
-    // Mapear también cuando viene por WS
+    // Mapear también cuando viene por WS (puede traer content/timestamp)
     const normalized = normalizeMsg(msg);
     if (!normalized) return;
 
@@ -233,7 +238,7 @@ export default function UserChat({
       },
     ]);
 
-    // 2) PRIMERO por REST (esto crea la conversación)
+    // 2) PRIMERO por REST (esto crea la conversación en tu backend)
     const base = API_BASE.replace(/\/+$/, "");
     try {
       const res = await fetch(`${base}/api/chat/messages/`, {
@@ -267,6 +272,9 @@ export default function UserChat({
           else next.push(normalized);
           return next;
         });
+
+        // ⬅️ ¡Muy importante! refrescar lista izquierda tras el primer mensaje
+        setConvRefreshTick((n) => n + 1);
       } else {
         const body = ctype.includes("json") ? await res.json() : await res.text();
         console.warn("POST /messages/ falló:", res.status, body);
@@ -277,7 +285,8 @@ export default function UserChat({
 
     // 3) SI el WS está listo, envía también por WS (opcional, sólo para “empujar” realtime)
     try {
-      sendPayload({ type: "message", text, client_id: clientId });
+      // Ajusta "action":"send" -> o "type":"message" según tu consumer
+      sendPayload({ action: "send", text, client_id: clientId });
     } catch {}
   };
 
@@ -292,6 +301,7 @@ export default function UserChat({
       <ListaConversacion
         token={token}
         activePeerId={peerId}
+        refreshKey={convRefreshTick}
         onSelectPeer={(val) => {
           if (typeof val === "object" && val !== null) {
             setSelected({
@@ -311,7 +321,7 @@ export default function UserChat({
             {/* Header translúcido con blur */}
             <div
               className="
-                px-4 py-3 border-b border-[#f3d7cb]/60 bg-white/70
+                px-4 py-3 border-b border-[#f3d9cb]/60 bg-white/70
                 backdrop-blur supports-[backdrop-filter]:bg-white/60
                 flex items-center justify-between
               "

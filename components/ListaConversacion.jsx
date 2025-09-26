@@ -1,7 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function ListaConversacion({ token, activePeerId, onSelectPeer }) {
+export default function ListaConversacion({
+  token,
+  activePeerId,
+  onSelectPeer,
+  refreshKey = 0, // ⬅️ nuevo prop para forzar refetch
+}) {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
@@ -46,7 +51,7 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
       ignore = true;
       controller.abort();
     };
-  }, [token]);
+  }, [token, refreshKey]); // ⬅️ importante: refetch cuando cambie refreshKey
 
   const filtered = items.filter((c) =>
     (c?.peer?.nombre || "").toLowerCase().includes(q.toLowerCase())
@@ -70,8 +75,8 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
       ) : (
         <ul className="divide-y">
           {filtered.map((c) => {
-            const pid = c?.peer?.id;                // id del peer (usuario)
-            const cid = c?.id;                      // id de la conversación (puede ser UUID)
+            const pid = c?.peer?.id; // id del peer (usuario)
+            const cid = c?.id;       // id de la conversación (puede ser UUID)
             const active = Number(pid) === Number(activePeerId);
             return (
               <li
@@ -88,7 +93,7 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-[#2b3136]">
-                      {c?.peer?.nombre || `Usuario ${pid}`}
+                      {c?.peer?.nombre || `Usuario #${pid}`}
                     </p>
                     {c?.unread > 0 && (
                       <span className="text-xs rounded-full px-2 py-0.5 bg-[#7d9a75] text-white">
@@ -97,7 +102,7 @@ export default function ListaConversacion({ token, activePeerId, onSelectPeer })
                     )}
                   </div>
                   <p className="text-sm text-gray-600 line-clamp-1">
-                    {c?.last_message?.text || "—"}
+                    {c?.last_message?.text || c?.last_message?.content || "—"}
                   </p>
                 </div>
               </li>
