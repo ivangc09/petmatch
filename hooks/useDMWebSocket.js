@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
+export default function useDMWebSocket({
+  baseWs = (typeof window !== "undefined" && process.env.NEXT_PUBLIC_WS_BASE) || "ws://localhost:8001",
+  token,
+  peerId,
+  onMessage,
+}) {
   const [ready, setReady] = useState(false);
   const [liveMessages, setLiveMessages] = useState([]);
   const wsRef = useRef(null);
@@ -35,6 +40,7 @@ export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
     ws.onclose = () => {
       setReady(false);
       // reconexión simple
+      if (retryRef.current) clearTimeout(retryRef.current);
       retryRef.current = setTimeout(connect, 1500);
     };
 
@@ -51,12 +57,10 @@ export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
           onMessageRef.current?.(data.payload);
           return;
         }
-        // Mensajes de presencia (opcional)
-        if (data && data.type === "presence") {
-          // podrías manejar presencia aquí
-          return;
-        }
-        // Fallback: si viniera plano o array
+        // Presencia (opcional)
+        if (data && data.type === "presence") return;
+
+        // Fallbacks
         if (Array.isArray(data)) {
           setLiveMessages((prev) => [...prev, ...data]);
           data.forEach((m) => onMessageRef.current?.(m));
@@ -70,7 +74,8 @@ export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
         // no-JSON: ignorar
       }
     };
-  }, [buildUrl, connect]);
+
+  }, [buildUrl]);
 
   useEffect(() => {
     connect();
@@ -81,7 +86,6 @@ export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
     };
   }, [connect]);
 
-  // Enviar texto al consumer (formato correcto)
   const sendText = useCallback((text) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== 1) return false; // 1 = OPEN
@@ -91,7 +95,6 @@ export default function useDMWebSocket({ baseWs, token, peerId, onMessage }) {
     return true;
   }, []);
 
-  // Para enviar payloads personalizados (si algún día agregas otras actions)
   const sendPayload = useCallback((payload) => {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== 1) return false;
