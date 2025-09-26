@@ -128,7 +128,104 @@ export default function UserChat({
     });
   };
 
-  // ⬇️ NO pasamos baseWs para evitar el TDZ; el hook usa su default interno
+const ensuredRef = useRef(new Set());
+
+async function ensureConversationIfNeeded() {
+  if (!peerId || !token) return false;
+  const key = String(peerId);
+  if (ensuredRef.current.has(key)) return true;
+
+  const base = API_BASE.replace(/\/+$/, "");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  const tries = [
+    // 1) endpoint explícito de "ensure"
+    { url: `${base}/api/chat/conversations/ensure/`, body: { peer_id: peerId } },
+    // 2) a veces lo llaman "start"
+    { url: `${base}/api/chat/conversations/start/`, body: { peer_id: peerId } },
+    // 3) crear conversación con POST al listado
+    { url: `${base}/api/chat/conversations/`, body: { peer_id: peerId } },
+  ];
+
+  for (const t of tries) {
+    try {
+      const res = await fetch(t.url, { method: "POST", headers, body: JSON.stringify(t.body) });
+      if (res.ok) {
+        ensuredRef.current.add(key);
+        return true;
+      }
+      // 409 ya existe también es “ok” para nosotros
+      if (res.status === 409) {
+        ensuredRef.current.add(key);
+        return true;
+      }
+      // log útil en dev
+      const ctype = res.headers.get("content-type") || "";
+      const body = ctype.includes("json") ? await res.json() : await res.text();
+      console.warn("ensureConversation fail:", t.url, res.status, body);
+    } catch (e) {
+      console.warn("ensureConversation error:", t.url, e);
+    }
+  }
+  return false;
+}
+
+async function restSendMessage(text, clientId) {
+  if (!peerId || !token) return false;
+  const base = API_BASE.replace(/\/+$/, "");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+
+  const tries = [
+    // 1) endpoint típico de mensajes
+    { url: `${base}/api/chat/messages/`, body: { peer_id: peerId, text, client_id: clientId } },
+    // 2) variantes comunes
+    { url: `${base}/api/chat/send/`, body: { peer_id: peerId, text, client_id: clientId } },
+    { url: `${base}/api/chat/message/`, body: { peer_id: peerId, text, client_id: clientId } },
+  ];
+
+  for (const t of tries) {
+    try {
+      const res = await fetch(t.url, { method: "POST", headers, body: JSON.stringify(t.body) });
+      const ctype = res.headers.get("content-type") || "";
+      if (res.ok && ctype.includes("application/json")) {
+        const msg = await res.json();
+        // reconciliar con el optimista
+        setHistory((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((m) => m.client_id === clientId);
+          const sid =
+            msg?.sender_id != null ? Number(msg.sender_id)
+            : msg?.sender?.id != null ? Number(msg.sender.id)
+            : Number(currentUserId);
+          const merged = {
+            id: msg.id ?? next[i]?.id ?? null,
+            client_id: clientId,
+            sender_id: sid,
+            text: msg.text ?? text,
+            created_at: msg.created_at ?? new Date().toISOString(),
+            mine: true,
+          };
+          if (i >= 0) next[i] = merged;
+          else next.push(merged);
+          return next;
+        });
+        return true;
+      }
+      // log para depurar
+      const body = ctype.includes("json") ? await res.json() : await res.text();
+      console.warn("restSendMessage fail:", t.url, res.status, body);
+    } catch (e) {
+      console.warn("restSendMessage error:", t.url, e);
+    }
+  }
+  return false;
+}
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
     peerId,
@@ -214,23 +311,38 @@ export default function UserChat({
     };
   }, [token, peerId, conversationId, resetLive]);
 
-  const handleSend = (text) => {
-    if (!text?.trim() || !peerId || currentUserId == null) return;
+  const handleSend = async (text) => {
+  if (!text?.trim() || !peerId || currentUserId == null) return;
 
-    const clientId = makeClientId();
-    setHistory((h) => [
-      ...h,
-      {
-        id: null,
-        client_id: clientId,
-        sender_id: Number(currentUserId),
-        text,
-        created_at: new Date().toISOString(),
-        mine: true,
-      },
-    ]);
-    sendPayload({ type: "message", text, client_id: clientId });
-  };
+  const clientId = makeClientId();
+
+  // mensaje optimista
+  setHistory((h) => [
+    ...h,
+    {
+      id: null,
+      client_id: clientId,
+      sender_id: Number(currentUserId),
+      text,
+      created_at: new Date().toISOString(),
+      mine: true,
+    },
+  ]);
+
+  // 1) asegurar/crear conversación si hace falta
+  await ensureConversationIfNeeded();
+
+  // 2) intentar por WS
+  const wsOK = sendPayload({ type: "message", text, client_id: clientId });
+
+  // 3) si WS no está listo o no envió, intentar por REST
+  if (!wsOK) {
+    const restOK = await restSendMessage(text, clientId);
+    if (!restOK) {
+      console.error("No se pudo enviar el mensaje ni por WS ni por REST");
+    }
+  }
+};
 
   return (
     <div
@@ -289,7 +401,7 @@ export default function UserChat({
             </div>
 
             {/* Input */}
-            <InputMensaje onSend={handleSend} disabled={!ready} />
+            <InputMensaje onSend={handleSend} disabled={!peerId || !token} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-gray-600">
