@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export default function useDMWebSocket({
   baseWs = (typeof window !== "undefined" && process.env.NEXT_PUBLIC_WS_BASE) || "ws://localhost:8001",
   token,
-  channelUserId,   // 👈 ID del usuario LOGUEADO (quien escucha)
+  peerId,
   onMessage,
 }) {
   const [ready, setReady] = useState(false);
@@ -15,13 +15,13 @@ export default function useDMWebSocket({
   useEffect(() => { onMessageRef.current = onMessage; }, [onMessage]);
 
   const buildUrl = useCallback(() => {
-    if (!baseWs || !token || !channelUserId) return null;
+    if (!baseWs || !token || !peerId) return null;
     const base = baseWs.replace(/\/+$/, "");
-    let url = `${base}/ws/chat/u/${encodeURIComponent(channelUserId)}/?token=${encodeURIComponent(String(token).split(" ").pop())}`;
+    let url = `${base}/ws/chat/u/${encodeURIComponent(peerId)}/?token=${encodeURIComponent(String(token).split(" ").pop())}`;
     if (url.startsWith("http://")) url = "ws://" + url.slice(7);
     if (url.startsWith("https://")) url = "wss://" + url.slice(8);
     return url;
-  }, [baseWs, token, channelUserId]);
+  }, [baseWs, token, peerId]);
 
   const connect = useCallback(() => {
     const url = buildUrl();
@@ -31,29 +31,26 @@ export default function useDMWebSocket({
     wsRef.current = ws;
 
     ws.onopen = () => {
-      console.log("[WS] OPEN", url);
+      // console.log("[WS] OPEN", url);
       setReady(true);
       if (retryRef.current) { clearTimeout(retryRef.current); retryRef.current = null; }
     };
 
     ws.onclose = (e) => {
-      console.log("[WS] CLOSE", e.code, e.reason);
+      // console.log("[WS] CLOSE", e.code, e.reason);
       setReady(false);
       if (retryRef.current) clearTimeout(retryRef.current);
       retryRef.current = setTimeout(connect, 1500);
     };
 
     ws.onerror = (e) => {
-      console.log("[WS] ERROR", e);
+      // console.log("[WS] ERROR", e);
       try { ws.close(); } catch {}
     };
 
     ws.onmessage = (evt) => {
       try {
         const data = JSON.parse(evt.data);
-
-        // Formatos típicos:
-        // {type:"message", payload:{...}}  |  {...} directo  |  [ ... ]
         if (data && data.type === "message" && data.payload) {
           setLiveMessages((prev) => [...prev, data.payload]);
           onMessageRef.current?.(data.payload);
@@ -69,7 +66,7 @@ export default function useDMWebSocket({
           onMessageRef.current?.(data);
         }
       } catch {
-        // no JSON; ignorar
+        // not JSON
       }
     };
   }, [buildUrl]);
@@ -85,7 +82,7 @@ export default function useDMWebSocket({
 
   const sendPayload = useCallback((payload) => {
     const ws = wsRef.current;
-    if (!ws || ws.readyState !== 1) return false;
+    if (!ws || ws.readyState !== 1) return false; // 1 = OPEN
     ws.send(JSON.stringify(payload));
     return true;
   }, []);

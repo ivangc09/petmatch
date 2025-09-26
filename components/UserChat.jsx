@@ -49,6 +49,7 @@ export default function UserChat({
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [convRefreshTick, setConvRefreshTick] = useState(0);
+  const [pollingActive, setPollingActive] = useState(false);
 
   const processedRef = useRef(new Set());        // "id:XX" | "cid:YY"
   const lastIdsRef = useRef(new Set());          // ids vistos
@@ -116,12 +117,14 @@ export default function UserChat({
     if (cidKey) processedRef.current.add(cidKey);
   };
 
-  // Suscríbete al canal del usuario logueado (quien debe recibir)
+  // ⬅️ Conéctate al canal del PEER (tu backend lo espera así)
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
-    channelUserId: currentUserId,
+    peerId,
     onMessage: onWsMessage,
   });
+
+  const live = ready || pollingActive;
 
   async function fetchMessagesJSON(opts) {
     const base = API_BASE.replace(/\/+$/, "");
@@ -187,6 +190,7 @@ export default function UserChat({
     run();
 
     // Polling cada 3s cuando la pestaña esté visible
+    setPollingActive(true);
     intervalId = setInterval(async () => {
       if (!canPoll()) return;
       try {
@@ -225,6 +229,7 @@ export default function UserChat({
       ignore = true;
       controller.abort();
       if (intervalId) clearInterval(intervalId);
+      setPollingActive(false);
     };
   }, [token, peerId, conversationId, resetLive]);
 
@@ -288,14 +293,12 @@ export default function UserChat({
       console.warn("Error POST /messages/:", e);
     }
 
-    // Empuje por WS (opcional). Incluye destinatario explícito.
+    // Empuje por WS (tu consumer espera action:"send" y toma peer de la URL)
     try {
       sendPayload({
-        type: "message",     // o action: "send" según tu consumer
+        action: "send",
         text,
         client_id: clientId,
-        peer_id: peerId,
-        recipient: peerId,
       });
     } catch {}
   };
@@ -332,8 +335,8 @@ export default function UserChat({
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${ready ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
-                {ready ? "Conectado" : "Conectando…"}
+                <span className={`h-2 w-2 rounded-full ${ (ready || pollingActive) ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
+                {(ready || pollingActive) ? "En vivo" : "Conectando…"}
               </div>
             </div>
 
