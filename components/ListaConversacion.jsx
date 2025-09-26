@@ -5,7 +5,7 @@ export default function ListaConversacion({
   token,
   activePeerId,
   onSelectPeer,
-  refreshKey = 0, // ⬅️ nuevo prop para forzar refetch
+  refreshKey = 0,
 }) {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
@@ -25,33 +25,21 @@ export default function ListaConversacion({
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
-
-        const ctype = res.headers.get("content-type") || "";
-        if (!res.ok || !ctype.includes("application/json")) {
-          const body = await res.text();
-          console.error("Conversations fetch failed:", res.status, res.statusText, ctype, body.slice(0, 300));
-          throw new Error(`Conversations returned ${res.status} ${ctype}`);
-        }
-
         const data = await res.json();
         if (!ignore) setItems(Array.isArray(data) ? data : []);
       } catch (e) {
-        if (!ignore) {
-          console.error("Conversations error:", e);
-          setItems([]);
-        }
+        if (!ignore) setItems([]);
       } finally {
         if (!ignore) setLoading(false);
       }
     };
 
     run();
-
     return () => {
       ignore = true;
       controller.abort();
     };
-  }, [token, refreshKey]); // ⬅️ importante: refetch cuando cambie refreshKey
+  }, [token, refreshKey]);
 
   const filtered = items.filter((c) =>
     (c?.peer?.nombre || "").toLowerCase().includes(q.toLowerCase())
@@ -67,7 +55,6 @@ export default function ListaConversacion({
           className="w-full rounded-xl border px-3 py-2 outline-none focus:ring"
         />
       </div>
-
       {loading ? (
         <div className="p-4 text-sm text-gray-500">Cargando…</div>
       ) : filtered.length === 0 ? (
@@ -75,8 +62,8 @@ export default function ListaConversacion({
       ) : (
         <ul className="divide-y">
           {filtered.map((c) => {
-            const pid = c?.peer?.id; // id del peer (usuario)
-            const cid = c?.id;       // id de la conversación (puede ser UUID)
+            const pid = c?.peer?.id;
+            const cid = c?.id;
             const active = Number(pid) === Number(activePeerId);
             return (
               <li
