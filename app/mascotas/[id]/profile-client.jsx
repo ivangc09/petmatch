@@ -154,17 +154,20 @@ export default function PetProfile({ mascota }) {
                     Solicitar adopción
                   </Link>
 
-                  <button
-                    onClick={handleEnviarMensaje}
-                    disabled={soyElResponsable || !responsableId}
+                  <Link
+                    href={
+                      soyElResponsable || !responsableId
+                        ? "#"
+                        : `/adoptante/chat?peer=${encodeURIComponent(responsableId)}`
+                    }
                     className={`inline-flex items-center justify-center rounded-xl px-5 py-3 text-white transition-colors ${
                       soyElResponsable || !responsableId
-                        ? "bg-gray-400 cursor-not-allowed"
+                        ? "bg-gray-400 cursor-not-allowed pointer-events-none"
                         : "bg-[#e0795e] hover:bg-[#D3764C]"
                     }`}
                   >
                     Enviar mensaje
-                  </button>
+                  </Link>
                 </div>
               </div>
             </aside>
