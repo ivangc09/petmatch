@@ -35,6 +35,17 @@ function resolveInitialPeerId(initialPeerIdProp) {
   return null;
 }
 
+/* =========================
+   🔐 Candado global por pestaña
+   ========================= */
+const ACTIVE_KEY = "__pm_uc_active_instance";
+function setActiveInstance(key) {
+  try { window[ACTIVE_KEY] = key; } catch {}
+}
+function getActiveInstance() {
+  try { return window[ACTIVE_KEY]; } catch { return null; }
+}
+
 export default function UserChat({
   currentUserId,
   token,
@@ -57,12 +68,26 @@ export default function UserChat({
   const mountedRef = useRef(true);
   const bootedRef = useRef(false);
 
-  // ⏳ Espera de ACK por client_id cuando se envía por WS
-  const pendingAckRef = useRef(new Map()); // client_id -> timeoutId
+  // clave única para esta instancia (para el lock)
+  const instanceKeyRef = useRef(`uc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
+  }, []);
+
+  // Tomar control como instancia activa al montar
+  useEffect(() => {
+    setActiveInstance(instanceKeyRef.current);
+    // Aviso si ya hay otra instancia activa
+    if (getActiveInstance() && getActiveInstance() !== instanceKeyRef.current) {
+      console.warn("[UserChat] Otra instancia activa detectada; esta quedará pasiva.");
+    }
+    return () => {
+      if (getActiveInstance() === instanceKeyRef.current) {
+        setActiveInstance(null);
+      }
+    };
   }, []);
 
   // Bootstrap: fija peerId al montar (prop / URL / localStorage)
@@ -95,7 +120,7 @@ export default function UserChat({
     };
   };
 
-  // Heurística para dedupe de “doble creación” (WS+POST con segundos de diferencia)
+  // Heurística para dedupe (doble creación WS+POST en ~3s)
   const isLikelyDuplicateMine = (a, b) => {
     try {
       if (!a || !b) return false;
@@ -104,12 +129,15 @@ export default function UserChat({
       if (!(a.mine && b.mine)) return false;
       if (a.text !== b.text) return false;
       const dt = Math.abs(new Date(a.created_at) - new Date(b.created_at));
-      return dt < 3000; // 3s
+      return dt < 3000;
     } catch { return false; }
   };
 
   // WS: sólo aceptamos mensajes del peer actual (entrantes o salientes)
   const onWsMessage = (msg) => {
+    // ⛔️ Si no soy la instancia activa, no proceso
+    if (getActiveInstance() !== instanceKeyRef.current) return;
+
     const normalized = normalizeMsg(msg);
     if (!normalized) return;
 
@@ -119,33 +147,9 @@ export default function UserChat({
       (rec != null && Number(rec) === Number(peerId));
     if (!isForThisPeer) return;
 
-    // ACK de mis propios mensajes → reemplazar optimista
-    if (normalized.client_id && normalized.mine) {
-      const pending = pendingAckRef.current.get(normalized.client_id);
-      if (pending) {
-        clearTimeout(pending);
-        pendingAckRef.current.delete(normalized.client_id);
-      }
-    }
-
-    // Si ya vi este client_id (optimista) y viene el definitivo con id → reemplazo
+    // Ignorar eco de mis propios mensajes si ya registré el client_id
     if (normalized.client_id && lastClientIdsRef.current.has(normalized.client_id)) {
-      setHistory((prev) => {
-        const next = [...prev];
-        const i = next.findIndex(x => x.client_id === normalized.client_id && (x.id == null));
-        if (i >= 0) {
-          next[i] = normalized;
-          if (normalized.id) {
-            lastIdsRef.current.add(normalized.id);
-            processedRef.current.add(`id:${normalized.id}`);
-          }
-          return next;
-        }
-        // Si no encuentro optimista, continuar flujo normal (igual lo añadimos abajo si no duplica)
-        return next;
-      });
-      // Evita continuar si ya hicimos el reemplazo
-      if (normalized.id && processedRef.current.has(`id:${normalized.id}`)) return;
+      return;
     }
 
     // Evitar duplicados por id/cid ya procesados
@@ -241,9 +245,6 @@ export default function UserChat({
     processedRef.current.clear();
     lastIdsRef.current = new Set();
     lastClientIdsRef.current = new Set();
-    pendingAckRef.current.forEach((t) => clearTimeout(t));
-    pendingAckRef.current.clear();
-
     setHistory([]);
     resetLive();
 
@@ -252,6 +253,9 @@ export default function UserChat({
     // Polling cada 3s cuando la pestaña esté visible
     setPollingActive(true);
     intervalId = setInterval(async () => {
+      // ⛔️ si no soy la instancia activa, no hago polling
+      if (getActiveInstance() !== instanceKeyRef.current) return;
+
       if (!canPoll()) return;
 
       try {
@@ -297,7 +301,7 @@ export default function UserChat({
               }
             }
 
-            // 2) Heurística por texto + timestamp cercano (por si el server no devuelve client_id)
+            // 2) Heurística por texto + timestamp cercano
             const idxHeur = next.findIndex(
               (x) =>
                 x.id == null &&
@@ -353,129 +357,80 @@ export default function UserChat({
       controller.abort();
       if (intervalId) clearInterval(intervalId);
       setPollingActive(false);
-      pendingAckRef.current.forEach((t) => clearTimeout(t));
-      pendingAckRef.current.clear();
     };
   }, [token, peerId, conversationId, resetLive]);
 
   const handleSend = async (text) => {
+    // ⛔️ Si no soy la instancia activa, no envío (para evitar doble envío)
+    if (getActiveInstance() !== instanceKeyRef.current) return;
+
     if (!text?.trim() || !peerId || currentUserId == null) return;
 
     const clientId = makeClientId();
 
     // Optimista
-    const tempMsg = {
-      id: null,
-      client_id: clientId,
-      sender_id: me,
-      text,
-      created_at: new Date().toISOString(),
-      mine: true,
-    };
-    setHistory((h) => [...h, tempMsg]);
-
-    processedRef.current.add(`cid:${clientId}`);
-    lastClientIdsRef.current.add(clientId);
-
-    const base = API_BASE.replace(/\/+$/, "");
-
-    // Preferir **SOLO WS** si está listo; si no llega ACK, fallback a POST
-    if (ready) {
-      try {
-        sendPayload({ action: "send", text, client_id: clientId });
-        // Espera ACK del WS; si no llega, fallback
-        const t = setTimeout(async () => {
-          // aún no llegó ACK => fallback a POST
-          try {
-            const res = await fetch(`${base}/api/chat/messages/`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
-            });
-            const ctype = res.headers.get("content-type") || "";
-            if (ctype.includes("application/json")) {
-              const msg = await res.json();
-              const normalized = normalizeMsg({ ...msg, client_id: clientId });
-              if (normalized?.id) {
-                processedRef.current.add(`id:${normalized.id}`);
-                lastIdsRef.current.add(normalized.id);
-              }
-              setHistory((prev) => {
-                const next = [...prev];
-                const i = next.findIndex((m) => m.client_id === clientId && (m.id == null));
-                if (i >= 0) next[i] = normalized;
-                else next.push(normalized);
-                return next;
-              });
-              setConvRefreshTick((n) => n + 1);
-            }
-          } catch {}
-          pendingAckRef.current.delete(clientId);
-        }, 2500);
-        pendingAckRef.current.set(clientId, t);
-      } catch {
-        // Si WS falla al enviar, hacemos POST
-        try {
-          const res = await fetch(`${base}/api/chat/messages/`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
-          });
-          const ctype = res.headers.get("content-type") || "";
-          if (ctype.includes("application/json")) {
-            const msg = await res.json();
-            const normalized = normalizeMsg({ ...msg, client_id: clientId });
-            if (normalized?.id) {
-              processedRef.current.add(`id:${normalized.id}`);
-              lastIdsRef.current.add(normalized.id);
-            }
-            setHistory((prev) => {
-              const next = [...prev];
-              const i = next.findIndex((m) => m.client_id === clientId && (m.id == null));
-              if (i >= 0) next[i] = normalized;
-              else next.push(normalized);
-              return next;
-            });
-            setConvRefreshTick((n) => n + 1);
-          }
-        } catch {}
-      }
-    } else {
-      // WS no listo → POST directo
-      try {
-        const res = await fetch(`${base}/api/chat/messages/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
-        });
-        const ctype = res.headers.get("content-type") || "";
-        if (ctype.includes("application/json")) {
-          const msg = await res.json();
-          const normalized = normalizeMsg({ ...msg, client_id: clientId });
-          if (normalized?.id) {
-            processedRef.current.add(`id:${normalized.id}`);
-            lastIdsRef.current.add(normalized.id);
-          }
-          setHistory((prev) => {
-            const next = [...prev];
-            const i = next.findIndex((m) => m.client_id === clientId && (m.id == null));
-            if (i >= 0) next[i] = normalized;
-            else next.push(normalized);
-            return next;
-          });
-          setConvRefreshTick((n) => n + 1);
-        }
-      } catch {}
+    setHistory((h) => [
+      ...h,
+      {
+        id: null,
+        client_id: clientId,
+        sender_id: me,
+        text,
+        created_at: new Date().toISOString(),
+        mine: true,
+      },
+    ]);
+    if (clientId) {
+      processedRef.current.add(`cid:${clientId}`);
+      lastClientIdsRef.current.add(clientId);
     }
+
+    // REST (crea conversación + mensaje)
+    const base = API_BASE.replace(/\/+$/, "");
+    try {
+      const res = await fetch(`${base}/api/chat/messages/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
+      });
+      const ctype = res.headers.get("content-type") || "";
+      const bodyText = await res.clone().text();
+      let msg = null;
+      if (ctype.includes("application/json")) {
+        try { msg = JSON.parse(bodyText); } catch {}
+      }
+      if (msg) {
+        const normalized = normalizeMsg({ ...msg, client_id: clientId });
+        if (normalized?.id) {
+          processedRef.current.add(`id:${normalized.id}`);
+          lastIdsRef.current.add(normalized.id);
+        }
+        setHistory((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((m) => m.client_id === clientId);
+          if (i >= 0) next[i] = normalized;
+          else next.push(normalized);
+          return next;
+        });
+        setConvRefreshTick((n) => n + 1);
+      } else {
+        console.warn("POST /messages/ no devolvió JSON:", res.status, ctype, bodyText?.slice?.(0, 180));
+      }
+    } catch (e) {
+      console.warn("Error POST /messages/:", e);
+    }
+
+    // Empuje por WS (tu consumer espera action:"send" y toma peer de la URL)
+    try {
+      sendPayload({
+        action: "send",
+        text,
+        client_id: clientId,
+      });
+    } catch {}
   };
 
   return (
