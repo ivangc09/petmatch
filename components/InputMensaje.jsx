@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export default function MessageInput({ onSend, disabled }) {
+export default function InputMensaje({ onSend, disabled }) {
   const [text, setText] = useState("");
 
   const handle = () => {
