@@ -181,7 +181,7 @@ export default function PetProfile({ mascota }) {
                   title="Cerrar"
                 >
                   ×
-                </button>
+                </button> 
 
                 {initialPeer && token ? (
                   <UserChat

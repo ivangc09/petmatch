@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ListaConversacion from "./ListaConversacion";
 import ListaMensajes from "./ListaMensajes";
 import InputMensaje from "./InputMensaje";
@@ -21,9 +22,11 @@ function makeClientId() {
 export default function UserChat({
   currentUserId,
   token,
-  baseWs = DEFAULT_WS,
+  wsBase = DEFAULT_WS,
+  initialPeerId,
 }) {
   const me = currentUserId != null ? Number(currentUserId) : null;
+  const sp = useSearchParams();
 
   const [selected, setSelected] = useState(null); // { peerId, conversationId?, peer? }
   const peerId = selected?.peerId ?? null;
@@ -39,6 +42,25 @@ export default function UserChat({
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // Preseleccionar peer solo por props o query (?peer=ID)
+  useEffect(() => {
+    const pidFromProp =
+      initialPeerId != null && !Number.isNaN(Number(initialPeerId))
+        ? Number(initialPeerId)
+        : null;
+
+    const pidFromQS = sp?.get?.("peer");
+    const pid = pidFromProp ?? (pidFromQS != null ? Number(pidFromQS) : null);
+
+    if (pid && !selected) {
+      setSelected({
+        peerId: pid,
+        conversationId: null,
+        peer: null,
+      });
+    }
+  }, [sp, initialPeerId, selected]);
 
   const isMine = (senderIdRaw) => {
     const sid = senderIdRaw != null ? Number(senderIdRaw) : null;
@@ -108,7 +130,7 @@ export default function UserChat({
   };
 
   const { ready, sendPayload, resetLive } = useDMWebSocket({
-    baseWs,
+    baseWs: wsBase,
     token,
     peerId,
     onMessage: onWsMessage,
@@ -119,8 +141,6 @@ export default function UserChat({
     const urls = [];
     if (peerId != null) {
       urls.push(`${base}/api/chat/messages/?peer_id=${peerId}`);
-      urls.push(`${base}/api/chat/messages/?peer=${peerId}`);
-      urls.push(`${base}/api/chat/messages/?user=${peerId}`);
     }
     if (conversationId) {
       urls.push(`${base}/api/chat/messages/?conversation_id=${conversationId}`);
@@ -251,9 +271,7 @@ export default function UserChat({
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-[#7d9a75]/20 ring-1 ring-[#7d9a75]/30" />
                 <div className="font-semibold text-gray-800">
-                  {selected?.peer?.nombre
-                    ? `${selected.peer.nombre}`
-                    : `Conversación con usuario #${peerId}`}
+                  Conversación con Usuario #{peerId}
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
@@ -268,7 +286,7 @@ export default function UserChat({
 
             {/* Mensajes */}
             <div className="flex-1 min-h-0">
-              <ListaMensajes messages={history} currentUserId={currentUserId} />
+              <ListaMensajes messages={history} currentUserId={currentUserId} loading={loading} />
             </div>
 
             {/* Input */}
