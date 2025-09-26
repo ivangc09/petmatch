@@ -253,6 +253,7 @@ export default function UserChat({
       const ctype = res.headers.get("content-type") || "";
       if (res.ok && ctype.includes("application/json")) {
         const msg = await res.json();
+        console.log("RESPUESTA POST /messages/", msg);
         // 2.1 Reconciliar optimista con respuesta del server
         setHistory((prev) => {
           const next = [...prev];
