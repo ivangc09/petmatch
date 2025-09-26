@@ -97,6 +97,8 @@ export default function UserChat({
     const normalized = normalizeMsg(msg);
     if (!normalized) return;
 
+    if(normalized.mine) return; // ya lo pusimos optimista
+
     const rec = msg?.recipient != null ? Number(msg.recipient) : null;
     const isForThisPeer =
       Number(normalized.sender_id) === Number(peerId) ||
