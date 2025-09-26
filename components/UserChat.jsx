@@ -15,10 +15,6 @@ function makeClientId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/**
- * Props extra (opcionales) para abrir directo una conversación:
- * - initialPeerId: number | string
- */
 export default function UserChat({
   currentUserId,
   token,
@@ -67,14 +63,31 @@ export default function UserChat({
     return meNum != null && sid === meNum;
   };
 
-  const onWsMessage = (msg) => {
-    const sidNorm =
-      msg?.sender_id != null ? Number(msg.sender_id)
-      : msg?.sender?.id != null ? Number(msg.sender.id)
+  // Normaliza un mensaje a { id, client_id, sender_id, text, created_at, mine }
+  const normalizeMsg = (raw) => {
+    if (!raw) return null;
+    const sid =
+      raw?.sender_id != null ? Number(raw.sender_id)
+      : raw?.sender?.id != null ? Number(raw.sender.id)
       : null;
 
-    const sidKey = msg.id ? `id:${msg.id}` : null;
-    const cidKey = msg.client_id ? `cid:${msg.client_id}` : null;
+    return {
+      id: raw.id ?? null,
+      client_id: raw.client_id ?? null,
+      sender_id: sid,
+      text: raw.text ?? raw.content ?? "",
+      created_at: raw.created_at ?? raw.timestamp ?? raw.date ?? null,
+      mine: isMine(sid),
+    };
+  };
+
+  const onWsMessage = (msg) => {
+    // Mapear también cuando viene por WS
+    const normalized = normalizeMsg(msg);
+    if (!normalized) return;
+
+    const sidKey = normalized.id ? `id:${normalized.id}` : null;
+    const cidKey = normalized.client_id ? `cid:${normalized.client_id}` : null;
     if (sidKey && processedRef.current.has(sidKey)) return;
     if (cidKey && processedRef.current.has(cidKey)) return;
 
@@ -88,37 +101,30 @@ export default function UserChat({
 
       const next = [...prev];
 
-      if (msg.client_id && byCid.has(msg.client_id)) {
-        const i = byCid.get(msg.client_id);
+      if (normalized.client_id && byCid.has(normalized.client_id)) {
+        const i = byCid.get(normalized.client_id);
         next[i] = {
           ...next[i],
-          id: msg.id,
-          sender_id: sidNorm,
-          text: msg.text,
-          created_at: msg.created_at,
-          mine: next[i].mine === true ? true : isMine(sidNorm),
-          client_id: msg.client_id,
+          id: normalized.id ?? next[i].id,
+          sender_id: normalized.sender_id ?? next[i].sender_id,
+          text: normalized.text ?? next[i].text,
+          created_at: normalized.created_at ?? next[i].created_at,
+          mine: next[i].mine === true ? true : normalized.mine,
+          client_id: normalized.client_id,
         };
-      } else if (msg.id && byId.has(msg.id)) {
-        const i = byId.get(msg.id);
+      } else if (normalized.id && byId.has(normalized.id)) {
+        const i = byId.get(normalized.id);
         next[i] = {
           ...next[i],
-          id: msg.id,
-          sender_id: sidNorm,
-          text: msg.text,
-          created_at: msg.created_at,
-          mine: isMine(sidNorm),
-          client_id: msg.client_id ?? next[i]?.client_id,
+          id: normalized.id,
+          sender_id: normalized.sender_id ?? next[i].sender_id,
+          text: normalized.text ?? next[i].text,
+          created_at: normalized.created_at ?? next[i].created_at,
+          mine: normalized.mine,
+          client_id: normalized.client_id ?? next[i]?.client_id,
         };
       } else {
-        next.push({
-          id: msg.id,
-          sender_id: sidNorm,
-          text: msg.text,
-          created_at: msg.created_at,
-          mine: isMine(sidNorm),
-          client_id: msg.client_id,
-        });
+        next.push(normalized);
       }
 
       if (sidKey) processedRef.current.add(sidKey);
@@ -128,104 +134,7 @@ export default function UserChat({
     });
   };
 
-const ensuredRef = useRef(new Set());
-
-async function ensureConversationIfNeeded() {
-  if (!peerId || !token) return false;
-  const key = String(peerId);
-  if (ensuredRef.current.has(key)) return true;
-
-  const base = API_BASE.replace(/\/+$/, "");
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-
-  const tries = [
-    // 1) endpoint explícito de "ensure"
-    { url: `${base}/api/chat/conversations/ensure/`, body: { peer_id: peerId } },
-    // 2) a veces lo llaman "start"
-    { url: `${base}/api/chat/conversations/start/`, body: { peer_id: peerId } },
-    // 3) crear conversación con POST al listado
-    { url: `${base}/api/chat/conversations/`, body: { peer_id: peerId } },
-  ];
-
-  for (const t of tries) {
-    try {
-      const res = await fetch(t.url, { method: "POST", headers, body: JSON.stringify(t.body) });
-      if (res.ok) {
-        ensuredRef.current.add(key);
-        return true;
-      }
-      // 409 ya existe también es “ok” para nosotros
-      if (res.status === 409) {
-        ensuredRef.current.add(key);
-        return true;
-      }
-      // log útil en dev
-      const ctype = res.headers.get("content-type") || "";
-      const body = ctype.includes("json") ? await res.json() : await res.text();
-      console.warn("ensureConversation fail:", t.url, res.status, body);
-    } catch (e) {
-      console.warn("ensureConversation error:", t.url, e);
-    }
-  }
-  return false;
-}
-
-async function restSendMessage(text, clientId) {
-  if (!peerId || !token) return false;
-  const base = API_BASE.replace(/\/+$/, "");
-  const headers = {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-
-  const tries = [
-    // 1) endpoint típico de mensajes
-    { url: `${base}/api/chat/messages/`, body: { peer_id: peerId, text, client_id: clientId } },
-    // 2) variantes comunes
-    { url: `${base}/api/chat/send/`, body: { peer_id: peerId, text, client_id: clientId } },
-    { url: `${base}/api/chat/message/`, body: { peer_id: peerId, text, client_id: clientId } },
-  ];
-
-  for (const t of tries) {
-    try {
-      const res = await fetch(t.url, { method: "POST", headers, body: JSON.stringify(t.body) });
-      const ctype = res.headers.get("content-type") || "";
-      if (res.ok && ctype.includes("application/json")) {
-        const msg = await res.json();
-        // reconciliar con el optimista
-        setHistory((prev) => {
-          const next = [...prev];
-          const i = next.findIndex((m) => m.client_id === clientId);
-          const sid =
-            msg?.sender_id != null ? Number(msg.sender_id)
-            : msg?.sender?.id != null ? Number(msg.sender.id)
-            : Number(currentUserId);
-          const merged = {
-            id: msg.id ?? next[i]?.id ?? null,
-            client_id: clientId,
-            sender_id: sid,
-            text: msg.text ?? text,
-            created_at: msg.created_at ?? new Date().toISOString(),
-            mine: true,
-          };
-          if (i >= 0) next[i] = merged;
-          else next.push(merged);
-          return next;
-        });
-        return true;
-      }
-      // log para depurar
-      const body = ctype.includes("json") ? await res.json() : await res.text();
-      console.warn("restSendMessage fail:", t.url, res.status, body);
-    } catch (e) {
-      console.warn("restSendMessage error:", t.url, e);
-    }
-  }
-  return false;
-}
+  // El hook usa su default interno de WS base; no pasamos baseWs para evitar TDZ
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
     peerId,
@@ -248,7 +157,8 @@ async function restSendMessage(text, clientId) {
         const res = await fetch(url, opts);
         const ctype = res.headers.get("content-type") || "";
         if (res.ok && ctype.includes("application/json")) {
-          return await res.json();
+          const data = await res.json();
+          return Array.isArray(data) ? data : [];
         }
         const body = await res.text();
         console.error("Messages try failed:", url, res.status, res.statusText, ctype, body.slice(0, 200));
@@ -279,15 +189,9 @@ async function restSendMessage(text, clientId) {
 
         if (ignore || !mountedRef.current) return;
 
-        const arr = Array.isArray(data) ? data : [];
+        // Normaliza historial recibido (content/timestamp → text/created_at)
         setHistory(
-          arr.map((m) => {
-            const sid =
-              m?.sender_id != null ? Number(m.sender_id)
-              : m?.sender?.id != null ? Number(m.sender.id)
-              : null;
-            return { ...m, sender_id: sid };
-          })
+          data.map((m) => normalizeMsg(m)).filter(Boolean)
         );
       } catch (e) {
         if (!ignore) {
@@ -312,37 +216,70 @@ async function restSendMessage(text, clientId) {
   }, [token, peerId, conversationId, resetLive]);
 
   const handleSend = async (text) => {
-  if (!text?.trim() || !peerId || currentUserId == null) return;
+    if (!text?.trim() || !peerId || currentUserId == null) return;
 
-  const clientId = makeClientId();
+    const clientId = makeClientId();
 
-  // mensaje optimista
-  setHistory((h) => [
-    ...h,
-    {
-      id: null,
-      client_id: clientId,
-      sender_id: Number(currentUserId),
-      text,
-      created_at: new Date().toISOString(),
-      mine: true,
-    },
-  ]);
+    // 1) Mensaje optimista
+    setHistory((h) => [
+      ...h,
+      {
+        id: null,
+        client_id: clientId,
+        sender_id: Number(currentUserId),
+        text,
+        created_at: new Date().toISOString(),
+        mine: true,
+      },
+    ]);
 
-  // 1) asegurar/crear conversación si hace falta
-  await ensureConversationIfNeeded();
+    // 2) PRIMERO por REST (esto crea la conversación)
+    const base = API_BASE.replace(/\/+$/, "");
+    try {
+      const res = await fetch(`${base}/api/chat/messages/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
+      });
 
-  // 2) intentar por WS
-  const wsOK = sendPayload({ type: "message", text, client_id: clientId });
-
-  // 3) si WS no está listo o no envió, intentar por REST
-  if (!wsOK) {
-    const restOK = await restSendMessage(text, clientId);
-    if (!restOK) {
-      console.error("No se pudo enviar el mensaje ni por WS ni por REST");
+      const ctype = res.headers.get("content-type") || "";
+      if (res.ok && ctype.includes("application/json")) {
+        const msg = await res.json();
+        // 2.1 Reconciliar optimista con respuesta del server
+        setHistory((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((m) => m.client_id === clientId);
+          const normalized = normalizeMsg({ ...msg, client_id: clientId }) || {
+            id: msg.id ?? next[i]?.id ?? null,
+            client_id: clientId,
+            sender_id:
+              msg?.sender_id != null ? Number(msg.sender_id)
+              : msg?.sender?.id != null ? Number(msg.sender.id)
+              : Number(currentUserId),
+            text: msg.text ?? msg.content ?? text,
+            created_at: msg.created_at ?? msg.timestamp ?? new Date().toISOString(),
+            mine: true,
+          };
+          if (i >= 0) next[i] = normalized;
+          else next.push(normalized);
+          return next;
+        });
+      } else {
+        const body = ctype.includes("json") ? await res.json() : await res.text();
+        console.warn("POST /messages/ falló:", res.status, body);
+      }
+    } catch (e) {
+      console.warn("Error POST /messages/:", e);
     }
-  }
-};
+
+    // 3) SI el WS está listo, envía también por WS (opcional, sólo para “empujar” realtime)
+    try {
+      sendPayload({ type: "message", text, client_id: clientId });
+    } catch {}
+  };
 
   return (
     <div
@@ -400,7 +337,7 @@ async function restSendMessage(text, clientId) {
               <ListaMensajes messages={history} currentUserId={currentUserId} loading={loading} />
             </div>
 
-            {/* Input */}
+            {/* Input — no depende del estado WS */}
             <InputMensaje onSend={handleSend} disabled={!peerId || !token} />
           </>
         ) : (
