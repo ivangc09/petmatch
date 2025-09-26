@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import ListaConversacion from "./ListaConversacion";
 import ListaMensajes from "./ListaMensajes";
 import InputMensaje from "./InputMensaje";
@@ -15,15 +14,42 @@ function makeClientId() {
   return `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Intenta obtener peerId desde varias fuentes (prop, URL, localStorage) */
+function resolveInitialPeerId(initialPeerIdProp) {
+  // 1) Prop explícito
+  if (initialPeerIdProp != null && !Number.isNaN(Number(initialPeerIdProp))) {
+    return Number(initialPeerIdProp);
+  }
+  // 2) URL (?peer=)
+  try {
+    if (typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      const pid = sp.get("peer");
+      if (pid != null && !Number.isNaN(Number(pid))) {
+        return Number(pid);
+      }
+    }
+  } catch {}
+  // 3) Fallback localStorage (por si lo guardaste al dar clic en “Enviar mensaje”)
+  try {
+    if (typeof window !== "undefined") {
+      const cached = window.localStorage.getItem("chat:lastPeerId");
+      if (cached != null && !Number.isNaN(Number(cached))) {
+        return Number(cached);
+      }
+    }
+  } catch {}
+  return null;
+}
+
 export default function UserChat({
   currentUserId,
   token,
-  initialPeerId,
+  initialPeerId, // <- usa esto si montas desde un perfil
 }) {
   const me = currentUserId != null ? Number(currentUserId) : null;
-  const sp = useSearchParams();
 
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(null); // { peerId, conversationId?, peer? }
   const peerId = selected?.peerId ?? null;
   const conversationId = selected?.conversationId ?? null;
 
@@ -33,30 +59,28 @@ export default function UserChat({
 
   const processedRef = useRef(new Set());
   const mountedRef = useRef(true);
+  const bootedRef = useRef(false); // para evitar re-bootstrap múltiples
 
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
 
-  // Preselección por props o query (?peer=ID)
+  // Bootstrap super-defensivo: fija peerId apenas montas
   useEffect(() => {
-    const pidFromProp =
-      initialPeerId != null && !Number.isNaN(Number(initialPeerId))
-        ? Number(initialPeerId)
-        : null;
-
-    const pidFromQS = sp?.get?.("peer");
-    const pid = pidFromProp ?? (pidFromQS != null ? Number(pidFromQS) : null);
-
-    if (pid && !selected) {
+    if (bootedRef.current) return; // corre solo una vez
+    const pid = resolveInitialPeerId(initialPeerId);
+    if (pid) {
       setSelected({ peerId: pid, conversationId: null, peer: null });
+      try { window.localStorage.setItem("chat:lastPeerId", String(pid)); } catch {}
     }
-  }, [sp, initialPeerId, selected]);
+    bootedRef.current = true;
+  }, [initialPeerId]);
 
   const isMine = (sid) =>
     me != null && sid != null && Number(sid) === me;
 
+  // Normaliza un mensaje a { id, client_id, sender_id, text, created_at, mine }
   const normalizeMsg = (raw) => {
     if (!raw) return null;
     const sid =
@@ -67,7 +91,7 @@ export default function UserChat({
       id: raw.id ?? null,
       client_id: raw.client_id ?? null,
       sender_id: sid,
-      text: raw.text ?? raw.content ?? "",
+      text: (raw.text ?? raw.content ?? "") + "",
       created_at: raw.created_at ?? raw.timestamp ?? null,
       mine: isMine(sid),
     };
@@ -83,11 +107,11 @@ export default function UserChat({
     if (cidKey && processedRef.current.has(cidKey)) return;
 
     setHistory((prev) => [...prev, normalized]);
-
     if (sidKey) processedRef.current.add(sidKey);
     if (cidKey) processedRef.current.add(cidKey);
   };
 
+  // Hook WS (usa default interno para la URL base)
   const { ready, sendPayload, resetLive } = useDMWebSocket({
     token,
     peerId,
@@ -98,10 +122,16 @@ export default function UserChat({
     const base = API_BASE.replace(/\/+$/, "");
     const url = `${base}/api/chat/messages/?peer_id=${peerId}`;
     const res = await fetch(url, opts);
+    const ctype = res.headers.get("content-type") || "";
+    if (!res.ok || !ctype.includes("application/json")) {
+      const body = await res.text();
+      throw new Error(`GET ${url} -> ${res.status} ${ctype} ${body.slice(0,180)}`);
+    }
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   }
 
+  // Carga de historial cada vez que cambie peerId/token
   useEffect(() => {
     if (!token || !peerId) return;
 
@@ -166,20 +196,30 @@ export default function UserChat({
         },
         body: JSON.stringify({ peer_id: peerId, text, client_id: clientId }),
       });
-      const msg = await res.json();
-      const normalized = normalizeMsg({ ...msg, client_id: clientId });
-      setHistory((prev) => {
-        const next = [...prev];
-        const i = next.findIndex((m) => m.client_id === clientId);
-        if (i >= 0) next[i] = normalized;
-        else next.push(normalized);
-        return next;
-      });
-      setConvRefreshTick((n) => n + 1);
+      const ctype = res.headers.get("content-type") || "";
+      const bodyText = await res.clone().text();
+      let msg = null;
+      if (ctype.includes("application/json")) {
+        try { msg = JSON.parse(bodyText); } catch {}
+      }
+      if (msg) {
+        const normalized = normalizeMsg({ ...msg, client_id: clientId });
+        setHistory((prev) => {
+          const next = [...prev];
+          const i = next.findIndex((m) => m.client_id === clientId);
+          if (i >= 0) next[i] = normalized;
+          else next.push(normalized);
+          return next;
+        });
+        setConvRefreshTick((n) => n + 1);
+      } else {
+        console.warn("POST /messages/ no devolvió JSON:", res.status, ctype, bodyText?.slice?.(0, 200));
+      }
     } catch (e) {
       console.warn("Error POST /messages/:", e);
     }
 
+    // Empuje WS opcional
     try {
       sendPayload({ type: "message", text, client_id: clientId });
     } catch {}
@@ -192,14 +232,17 @@ export default function UserChat({
         activePeerId={peerId}
         refreshKey={convRefreshTick}
         onSelectPeer={(val) => {
+          let pid = null, cid = null, peer = null;
           if (typeof val === "object" && val !== null) {
-            setSelected({
-              peerId: val.peerId ?? val.id ?? null,
-              conversationId: val.conversationId ?? null,
-              peer: val.peer ?? null,
-            });
+            pid = val.peerId ?? val.id ?? null;
+            cid = val.conversationId ?? null;
+            peer = val.peer ?? null;
           } else {
-            setSelected({ peerId: val ?? null, conversationId: null, peer: null });
+            pid = val ?? null;
+          }
+          if (pid) {
+            setSelected({ peerId: pid, conversationId: cid, peer });
+            try { window.localStorage.setItem("chat:lastPeerId", String(pid)); } catch {}
           }
         }}
       />
@@ -214,11 +257,8 @@ export default function UserChat({
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    ready ? "bg-[#7d9a75]" : "bg-amber-500"
-                  }`}
-                />
+                {/* Indicador WS (informativo) */}
+                <span className={`h-2 w-2 rounded-full ${ready ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
                 {ready ? "Conectado" : "Conectando…"}
               </div>
             </div>
