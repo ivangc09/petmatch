@@ -15,6 +15,30 @@ export default function PetProfile({ mascota }) {
   const [token, setToken] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
+  const DOG_TARGET_HEIGHTS = {
+  chico: 0.35,
+  mediano: 0.58,
+  grande: 0.75,
+  };
+
+  const especieNorm = (especie || "").toLowerCase();
+  const tallaNorm = (tamaño || "").toLowerCase();
+
+
+  const tallaClave =
+    tallaNorm.includes("peque") || tallaNorm.includes("chico") ? "chico" :
+    tallaNorm.includes("med") ? "mediano" :
+    tallaNorm.includes("gigan") ? "gigante" :
+    tallaNorm.includes("gran") ? "grande" :
+    "mediano";
+
+
+  const height_m = especieNorm === "gato" ? 0.25 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
+
+  const markerCm = 10;
+
+  const arHref = `/ar?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&marker=${markerCm}&height_m=${height_m.toFixed(2)}&ruler=1`;
+
   const mainImg = Array.isArray(fotos)
     ? (fotos[active] ?? "/placeholder-pet.jpg")
     : (fotos ?? "/placeholder-pet.jpg");
@@ -121,7 +145,7 @@ export default function PetProfile({ mascota }) {
 
                 <div className="mt-6">
                   <Link
-                      href={`/ar?type=${encodeURIComponent(especie)}&name=${encodeURIComponent(nombre ?? "")}`}
+                      href={arHref}
                       target="_blank"
                       className="inline-flex items-center px-4 py-2 rounded-2xl bg-[#7d9a75] text-white hover:bg-[#607859]"
                   >
