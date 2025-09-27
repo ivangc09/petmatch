@@ -8,6 +8,7 @@ import VeterinarioHeader from "@/components/VeterinarioHeader";
 export default function ChatPage() {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [token, setToken] = useState(null);
+  const [tipoUsuario, setTipoUsuario] = useState("");
 
   useEffect(() => {
     try {
@@ -16,7 +17,7 @@ export default function ChatPage() {
         const u = JSON.parse(raw);
         const id = u?.id ?? u?.user?.id ?? u?.data?.id ?? null;
         if (id != null) setCurrentUserId(Number(id));
-        tipoUsuario = u?.tipo_usuario;
+        if (u?.tipo_usuario) setTipoUsuario(u.tipo_usuario);
       }
     } catch {}
     const t = localStorage.getItem("token") || localStorage.getItem("access_token");
