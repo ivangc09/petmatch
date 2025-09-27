@@ -19,7 +19,7 @@ export default function InputMensaje({ onSend, disabled }) {
         bg-white/75 backdrop-blur supports-[backdrop-filter]:bg-white/65
       "
     >
-      <div className="mx-auto max-w-3xl flex justify-between gap-2">
+      <div className="mx-auto max-w-5xl flex justify-between gap-2">
         <input
           value={text || ""}
           onChange={(e) => setText(e.target.value)}
