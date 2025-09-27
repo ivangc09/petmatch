@@ -164,7 +164,6 @@ function ARInner() {
               <div className="text-sm text-gray-700 mt-2">
                 Tips:
                 <ul className="list-disc text-left ml-6 mt-1 space-y-1">
-                  <li>Abre en <b>https</b> o <b>http://localhost</b>.</li>
                   <li>Permite el acceso a la <b>cámara</b>.</li>
                   <li>Usa HIRO oficial y mide el borde negro. Ej.: <code>?marker=10</code> si son 10&nbsp;cm.</li>
                   {/*<li>Si usas AR.js local, confirma <code>/public/vendor/ar/aframe-ar.min.js</code>.</li>*/}
@@ -180,9 +179,6 @@ function ARInner() {
         <div className="mx-auto max-w-lg rounded-2xl bg-white/85 backdrop-blur shadow p-3 text-sm text-gray-800">
           <div>
             <b>Tipo:</b> {typeParam} • <b>Marker:</b> {markerCm} cm • <b>Altura objetivo:</b> {targetHeight} m • <b>Scale aplicado:</b> {scale.toFixed(3)}
-          </div>
-          <div className="mt-1">
-            Ejemplos: <code>/ar?type=perro&marker=10&height_m=0.75</code> • <code>/ar?type=gato&marker=10&height_m=0.25</code>
           </div>
         </div>
       </div>

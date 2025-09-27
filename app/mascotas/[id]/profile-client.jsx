@@ -33,7 +33,7 @@ export default function PetProfile({ mascota }) {
     "mediano";
 
 
-  const height_m = especieNorm === "gato" ? 0.25 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
+  const height_m = especieNorm === "gato" ? 1.25 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
 
   const markerCm = 10;
 
