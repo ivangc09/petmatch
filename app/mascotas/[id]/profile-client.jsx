@@ -16,9 +16,9 @@ export default function PetProfile({ mascota }) {
   const [showChat, setShowChat] = useState(false);
 
   const DOG_TARGET_HEIGHTS = {
-  chico: 0.35,
-  mediano: 0.58,
-  grande: 0.75,
+  chico: 1.35,
+  mediano: 1.58,
+  grande: 1.75,
   };
 
   const especieNorm = (especie || "").toLowerCase();
@@ -33,7 +33,7 @@ export default function PetProfile({ mascota }) {
     "mediano";
 
 
-  const height_m = especieNorm === "gato" ? 1.25 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
+  const height_m = especieNorm === "gato" ? 1.28 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
 
   const markerCm = 10;
 
