@@ -300,7 +300,7 @@ export default function UserChat({
     // Empuje por WS (opcional). Incluye destinatario explícito.
     try {
       sendPayload({
-        type: "message",     // o action: "send" según tu consumer
+        type: "message",
         text,
         client_id: clientId,
         peer_id: peerId,
@@ -360,8 +360,8 @@ export default function UserChat({
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full ${ready ? "bg-[#7d9a75]" : "bg-amber-500"}`} />
-                {ready ? "Conectado" : "Conectando…"}
+                <span className={`h-2 w-2 rounded-full bg-[#7d9a75]`} />
+                  Conectado
               </div>
             </div>
 
