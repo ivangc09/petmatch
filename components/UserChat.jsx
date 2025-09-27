@@ -35,11 +35,7 @@ function resolveInitialPeerId(initialPeerIdProp) {
   return null;
 }
 
-export default function UserChat({
-  currentUserId,
-  token,
-  initialPeerId,
-}) {
+export default function UserChat({ currentUserId, token, initialPeerId }) {
   const me = currentUserId != null ? Number(currentUserId) : null;
 
   const [selected, setSelected] = useState(null); // { peerId, conversationId?, peer? }
@@ -50,15 +46,17 @@ export default function UserChat({
   const [loading, setLoading] = useState(false);
   const [convRefreshTick, setConvRefreshTick] = useState(0);
 
-  const processedRef = useRef(new Set());        // "id:XX" | "cid:YY"
-  const lastIdsRef = useRef(new Set());          // ids vistos
-  const lastClientIdsRef = useRef(new Set());    // client_ids vistos
+  const processedRef = useRef(new Set()); // "id:XX" | "cid:YY"
+  const lastIdsRef = useRef(new Set()); // ids vistos
+  const lastClientIdsRef = useRef(new Set()); // client_ids vistos
   const mountedRef = useRef(true);
   const bootedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // Bootstrap: fija peerId al montar (prop / URL / localStorage)
@@ -66,7 +64,7 @@ export default function UserChat({
     if (bootedRef.current) return;
     const pid = resolveInitialPeerId(initialPeerId);
     if (pid) {
-      // intenta recuperar nombre/username cacheados para tener algo bonito en el header
+      // intenta recuperar nombre/username cacheados para el header
       let cachedPeer = null;
       try {
         const cachedName = window.localStorage.getItem("chat:lastPeerName");
@@ -76,7 +74,9 @@ export default function UserChat({
         }
       } catch {}
       setSelected({ peerId: pid, conversationId: null, peer: cachedPeer });
-      try { window.localStorage.setItem("chat:lastPeerId", String(pid)); } catch {}
+      try {
+        window.localStorage.setItem("chat:lastPeerId", String(pid));
+      } catch {}
     }
     bootedRef.current = true;
   }, [initialPeerId]);
@@ -87,9 +87,11 @@ export default function UserChat({
   const normalizeMsg = (raw) => {
     if (!raw) return null;
     const sid =
-      raw?.sender_id != null ? Number(raw.sender_id)
-      : raw?.sender?.id != null ? Number(raw.sender.id)
-      : null;
+      raw?.sender_id != null
+        ? Number(raw.sender_id)
+        : raw?.sender?.id != null
+        ? Number(raw.sender.id)
+        : null;
     return {
       id: raw.id ?? null,
       client_id: raw.client_id ?? null,
@@ -139,11 +141,60 @@ export default function UserChat({
     const ctype = res.headers.get("content-type") || "";
     if (!res.ok || !ctype.includes("application/json")) {
       const body = await res.text();
-      throw new Error(`GET ${url} -> ${res.status} ${ctype} ${body.slice(0,160)}`);
+      throw new Error(`GET ${url} -> ${res.status} ${ctype} ${body.slice(0, 160)}`);
     }
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   }
+
+  // 🔎 Cargar peer (nombre/username) desde /api/chat/conversations/ si falta
+  useEffect(() => {
+    if (!token || !peerId) return;
+    // si ya hay nombre/username, no hace falta
+    const alreadyHasName =
+      selected?.peer?.nombre || selected?.peer?.username || selected?.peer?.name;
+    if (alreadyHasName) return;
+
+    let ignore = false;
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const base = API_BASE.replace(/\/+$/, "");
+        const res = await fetch(`${base}/api/chat/conversations/`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const ctype = res.headers.get("content-type") || "";
+        if (!res.ok || !ctype.includes("application/json")) return;
+        const list = await res.json();
+        if (!Array.isArray(list)) return;
+
+        const found = list.find((c) => Number(c?.peer?.id) === Number(peerId));
+        if (found?.peer && !ignore && mountedRef.current) {
+          const peer = found.peer;
+          setSelected((prev) =>
+            prev && Number(prev.peerId) === Number(peerId)
+              ? { ...prev, peer }
+              : { peerId, conversationId: found.id ?? null, peer }
+          );
+          // cachea para siguientes cargas
+          try {
+            if (peer?.nombre) window.localStorage.setItem("chat:lastPeerName", peer.nombre);
+            if (peer?.username) window.localStorage.setItem("chat:lastPeerUsername", peer.username);
+            if (peer?.name) window.localStorage.setItem("chat:lastPeerName", peer.name);
+          } catch {}
+        }
+      } catch {
+        /* noop */
+      }
+    })();
+
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [token, peerId, selected?.peer?.nombre, selected?.peer?.username, selected?.peer?.name]);
 
   // Carga de historial + polling visible cada 3s
   useEffect(() => {
@@ -171,8 +222,14 @@ export default function UserChat({
           // seed sets para evitar duplicados
           try {
             normalized.forEach((m) => {
-              if (m?.id != null) { lastIdsRef.current.add(m.id); processedRef.current.add(`id:${m.id}`); }
-              if (m?.client_id != null) { lastClientIdsRef.current.add(m.client_id); processedRef.current.add(`cid:${m.client_id}`); }
+              if (m?.id != null) {
+                lastIdsRef.current.add(m.id);
+                processedRef.current.add(`id:${m.id}`);
+              }
+              if (m?.client_id != null) {
+                lastClientIdsRef.current.add(m.client_id);
+                processedRef.current.add(`cid:${m.client_id}`);
+              }
             });
           } catch {}
         }
@@ -222,8 +279,14 @@ export default function UserChat({
 
         if (normalized.length > 0) {
           normalized.forEach((m) => {
-            if (m.id) { lastIdsRef.current.add(m.id); processedRef.current.add(`id:${m.id}`); }
-            if (m.client_id) { lastClientIdsRef.current.add(m.client_id); processedRef.current.add(`cid:${m.client_id}`); }
+            if (m.id) {
+              lastIdsRef.current.add(m.id);
+              processedRef.current.add(`id:${m.id}`);
+            }
+            if (m.client_id) {
+              lastClientIdsRef.current.add(m.client_id);
+              processedRef.current.add(`cid:${m.client_id}`);
+            }
           });
           setHistory((prev) => [...prev, ...normalized]);
         }
@@ -274,7 +337,9 @@ export default function UserChat({
       const bodyText = await res.clone().text();
       let msg = null;
       if (ctype.includes("application/json")) {
-        try { msg = JSON.parse(bodyText); } catch {}
+        try {
+          msg = JSON.parse(bodyText);
+        } catch {}
       }
       if (msg) {
         const normalized = normalizeMsg({ ...msg, client_id: clientId });
@@ -291,7 +356,12 @@ export default function UserChat({
         });
         setConvRefreshTick((n) => n + 1);
       } else {
-        console.warn("POST /messages/ no devolvió JSON:", res.status, ctype, bodyText?.slice?.(0, 180));
+        console.warn(
+          "POST /messages/ no devolvió JSON:",
+          res.status,
+          ctype,
+          bodyText?.slice?.(0, 180)
+        );
       }
     } catch (e) {
       console.warn("Error POST /messages/:", e);
@@ -300,7 +370,7 @@ export default function UserChat({
     // Empuje por WS (opcional). Incluye destinatario explícito.
     try {
       sendPayload({
-        type: "message",
+        type: "message", // o action: "send" según tu consumer
         text,
         client_id: clientId,
         peer_id: peerId,
@@ -311,9 +381,13 @@ export default function UserChat({
 
   // ====== Display name con fallback y cache ======
   const cachedName =
-    (typeof window !== "undefined" && localStorage.getItem("chat:lastPeerName")) || null;
+    (typeof window !== "undefined" &&
+      localStorage.getItem("chat:lastPeerName")) ||
+    null;
   const cachedUser =
-    (typeof window !== "undefined" && localStorage.getItem("chat:lastPeerUsername")) || null;
+    (typeof window !== "undefined" &&
+      localStorage.getItem("chat:lastPeerUsername")) ||
+    null;
 
   const displayName =
     selected?.peer?.nombre ||
@@ -330,7 +404,9 @@ export default function UserChat({
         activePeerId={peerId}
         refreshKey={convRefreshTick}
         onSelectPeer={(val) => {
-          let pid = null, cid = null, peer = null;
+          let pid = null,
+            cid = null,
+            peer = null;
           if (typeof val === "object" && val !== null) {
             pid = val.peerId ?? val.id ?? null;
             cid = val.conversationId ?? null;
@@ -342,9 +418,15 @@ export default function UserChat({
             setSelected({ peerId: pid, conversationId: cid, peer });
             try {
               window.localStorage.setItem("chat:lastPeerId", String(pid));
-              if (peer?.nombre)   window.localStorage.setItem("chat:lastPeerName", peer.nombre);
-              if (peer?.username) window.localStorage.setItem("chat:lastPeerUsername", peer.username);
-              if (peer?.name)     window.localStorage.setItem("chat:lastPeerName", peer.name);
+              if (peer?.nombre)
+                window.localStorage.setItem("chat:lastPeerName", peer.nombre);
+              if (peer?.username)
+                window.localStorage.setItem(
+                  "chat:lastPeerUsername",
+                  peer.username
+                );
+              if (peer?.name)
+                window.localStorage.setItem("chat:lastPeerName", peer.name);
             } catch {}
           }
         }}
@@ -355,18 +437,24 @@ export default function UserChat({
             <div className="px-4 py-3 border-b border-[#f3d7cb]/60 bg-white/70 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-[#7d9a75]/20 ring-1 ring-[#7d9a75]/30" />
-                <div className="font-semibold text-gray-800">
-                  {displayName}
-                </div>
+                <div className="font-semibold text-gray-800">{displayName}</div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
-                <span className={`h-2 w-2 rounded-full bg-[#7d9a75]`} />
-                  Conectado
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    ready ? "bg-[#7d9a75]" : "bg-amber-500"
+                  }`}
+                />
+                {ready ? "Conectado" : "Conectando…"}
               </div>
             </div>
 
             <div className="flex-1 min-h-0">
-              <ListaMensajes messages={history} currentUserId={currentUserId} loading={loading} />
+              <ListaMensajes
+                messages={history}
+                currentUserId={currentUserId}
+                loading={loading}
+              />
             </div>
 
             <InputMensaje onSend={handleSend} disabled={!peerId || !token} />
