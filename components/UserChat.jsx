@@ -66,7 +66,16 @@ export default function UserChat({
     if (bootedRef.current) return;
     const pid = resolveInitialPeerId(initialPeerId);
     if (pid) {
-      setSelected({ peerId: pid, conversationId: null, peer: null });
+      // intenta recuperar nombre/username cacheados para tener algo bonito en el header
+      let cachedPeer = null;
+      try {
+        const cachedName = window.localStorage.getItem("chat:lastPeerName");
+        const cachedUser = window.localStorage.getItem("chat:lastPeerUsername");
+        if (cachedName || cachedUser) {
+          cachedPeer = { nombre: cachedName || null, username: cachedUser || null, id: Number(pid) };
+        }
+      } catch {}
+      setSelected({ peerId: pid, conversationId: null, peer: cachedPeer });
       try { window.localStorage.setItem("chat:lastPeerId", String(pid)); } catch {}
     }
     bootedRef.current = true;
@@ -300,6 +309,20 @@ export default function UserChat({
     } catch {}
   };
 
+  // ====== Display name con fallback y cache ======
+  const cachedName =
+    (typeof window !== "undefined" && localStorage.getItem("chat:lastPeerName")) || null;
+  const cachedUser =
+    (typeof window !== "undefined" && localStorage.getItem("chat:lastPeerUsername")) || null;
+
+  const displayName =
+    selected?.peer?.nombre ||
+    selected?.peer?.username ||
+    selected?.peer?.name ||
+    cachedName ||
+    cachedUser ||
+    (peerId ? `Usuario #${peerId}` : "Usuario");
+
   return (
     <div className="w-full h-[540px] md:h-[580px] flex rounded-2xl overflow-hidden border border-[#f3d7cb]/60 shadow bg-gradient-to-b from-[#fff6f1] to-[#fdeee7]">
       <ListaConversacion
@@ -317,7 +340,12 @@ export default function UserChat({
           }
           if (pid) {
             setSelected({ peerId: pid, conversationId: cid, peer });
-            try { window.localStorage.setItem("chat:lastPeerId", String(pid)); } catch {}
+            try {
+              window.localStorage.setItem("chat:lastPeerId", String(pid));
+              if (peer?.nombre)   window.localStorage.setItem("chat:lastPeerName", peer.nombre);
+              if (peer?.username) window.localStorage.setItem("chat:lastPeerUsername", peer.username);
+              if (peer?.name)     window.localStorage.setItem("chat:lastPeerName", peer.name);
+            } catch {}
           }
         }}
       />
@@ -328,7 +356,7 @@ export default function UserChat({
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-[#7d9a75]/20 ring-1 ring-[#7d9a75]/30" />
                 <div className="font-semibold text-gray-800">
-                  {selected?.peer?.nombre || "-"}
+                  {displayName}
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
