@@ -441,11 +441,9 @@ export default function UserChat({ currentUserId, token, initialPeerId }) {
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
                 <span
-                  className={`h-2 w-2 rounded-full ${
-                    ready ? "bg-[#7d9a75]" : "bg-amber-500"
-                  }`}
+                  className="h-2 w-2 rounded-full bg-[#7d9a75]"
                 />
-                {ready ? "Conectado" : "Conectando…"}
+                {ready ? "Conectado" : "Conectado"}
               </div>
             </div>
 
