@@ -328,7 +328,7 @@ export default function UserChat({
               <div className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-full bg-[#7d9a75]/20 ring-1 ring-[#7d9a75]/30" />
                 <div className="font-semibold text-gray-800">
-                  Conversación con Usuario #{peerId}
+                  {selected?.peer?.username || selected?.peer?.nombre || `Usuario #${peerId}`}
                 </div>
               </div>
               <div className="text-xs text-gray-600 flex items-center gap-2">
