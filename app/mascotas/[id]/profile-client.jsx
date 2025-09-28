@@ -38,6 +38,7 @@ export default function PetProfile({ mascota }) {
   const markerCm = 10;
 
   const arHref = `/ar?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&marker=${markerCm}&height_m=${height_m.toFixed(2)}&ruler=1`;
+  const arWorldHref = `/ar-world?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&height_m=${height_m.toFixed(2)}`;
 
   const mainImg = Array.isArray(fotos)
     ? (fotos[active] ?? "/placeholder-pet.jpg")
@@ -145,7 +146,7 @@ export default function PetProfile({ mascota }) {
 
                 <div className="mt-6">
                   <Link
-                      href={arHref}
+                      href={arWorldHref}
                       target="_blank"
                       className="inline-flex items-center px-4 py-2 rounded-2xl bg-[#7d9a75] text-white hover:bg-[#607859]"
                   >
