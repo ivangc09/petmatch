@@ -29,6 +29,8 @@ function ArWorldInner() {
   );
 
   const [ready, setReady] = useState(false);
+  const [arCapable, setArCapable] = useState(false);
+  const [status, setStatus] = useState("checking");
   const ref = useRef(null);
 
   const glbHeight = GLB_HEIGHTS[typeParam] ?? 1.0;
@@ -38,21 +40,52 @@ function ArWorldInner() {
     const el = ref.current;
     if (!el) return;
 
-    function onLoad() {
+    const onLoad = () => {
       try {
         const s = scale;
         const model = el.model;
-        if (model?.scene) {
-          model.scene.scale.set(s, s, s);
-        }
+        if (model?.scene) model.scene.scale.set(s, s, s);
       } catch (e) {
-        console.warn("No se pudo aplicar escala vía scene-graph:", e);
+        console.warn("Escala scene-graph:", e);
       }
-    }
+    };
+
+    const onArStatus = (e) => setStatus(e.detail?.status || "unknown");
 
     el.addEventListener("load", onLoad);
-    return () => el.removeEventListener("load", onLoad);
+    el.addEventListener("ar-status", onArStatus);
+
+    (async () => {
+      try {
+        // Detecta si hay algún modo AR disponible (scene-viewer o webxr)
+        const ok = await el.canActivateAR?.();
+        setArCapable(!!ok);
+        setStatus(ok ? "not-presenting" : "unsupported");
+      } catch {
+        setArCapable(false);
+        setStatus("unsupported");
+      }
+    })();
+
+    return () => {
+      el.removeEventListener("load", onLoad);
+      el.removeEventListener("ar-status", onArStatus);
+    };
   }, [scale]);
+
+  const launchAR = async () => {
+    const el = ref.current;
+    if (!el) return;
+    try {
+      await el.activateAR();
+      // si falla, cae al catch
+    } catch (e) {
+      alert(
+        "No se pudo abrir AR.\n\nTips Android:\n• Abre en Chrome (no navegador dentro de WhatsApp/Instagram).\n• Actualiza Google Chrome y Google Play Services for AR.\n• Asegúrate de que la página NO esté dentro de un iframe."
+      );
+      console.warn("activateAR() error:", e);
+    }
+  };
 
   return (
     <>
@@ -70,7 +103,7 @@ function ArWorldInner() {
             ref={ref}
             src={modelPath}
             ar
-            // solo Android: scene-viewer (app nativa) o webxr
+            // Solo Android: abre Scene Viewer o WebXR
             // eslint-disable-next-line react/no-unknown-property
             ar-modes="scene-viewer webxr"
             // eslint-disable-next-line react/no-unknown-property
@@ -86,18 +119,24 @@ function ArWorldInner() {
             ar-placement="floor"
             // eslint-disable-next-line react/no-unknown-property
             touch-action="pan-y"
-          >
-            {/* Botón AR (aparece en Android) */}
-            {/* eslint-disable-next-line react/no-unknown-property */}
-            <button slot="ar-button" className="px-4 py-2 rounded-xl bg-white/90 absolute bottom-6 left-1/2 -translate-x-1/2">
-              Ver en tu espacio (AR)
-            </button>
-          </model-viewer>
+          />
         ) : (
-          <div className="w-full h-full grid place-items-center text-white">
-            Cargando visor…
-          </div>
+          <div className="w-full h-full grid place-items-center text-white">Cargando visor…</div>
         )}
+      </div>
+
+      {/* Botón SIEMPRE visible que intenta abrir AR */}
+      <div className="fixed bottom-20 left-0 right-0 z-50 grid place-items-center">
+        <button
+          onClick={launchAR}
+          className={`px-4 py-2 rounded-2xl text-white ${arCapable ? "bg-[#7d9a75] hover:bg-[#607859]" : "bg-gray-500"}`}
+          title={arCapable ? "Abrir AR" : "Este navegador no soporta AR"}
+        >
+          Ver en tu espacio (AR)
+        </button>
+        <div className="mt-2 text-xs text-white/80">
+          Estado AR: {status}
+        </div>
       </div>
 
       {/* Overlay info */}
