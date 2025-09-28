@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState } from "react";
+import { useMemo, useEffect, useRef, useState, Suspense } from "react";
 import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 
