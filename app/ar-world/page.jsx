@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 export const dynamic = "force-dynamic";
 
 const GLB_HEIGHTS = { perro: 0.605, gato: 0.25 };
+const GLB_LENGTHS = { perro: 1.00, gato: 0.25 };
 
 export default function ARWorldPage() {
   return (
@@ -19,10 +20,18 @@ export default function ARWorldPage() {
 function ArWorldInner() {
   const sp = useSearchParams();
 
-  const typeParam = (sp.get("type") || "perro").toLowerCase();
-  const defaultTarget = typeParam === "gato" ? 0.28 : 0.55;
-  const targetHeight = parseFloat((sp.get("height_m") || `${defaultTarget}`).replace(",", "."));
+  const typeParam = (sp.get("type") || "perro").toLowerCase(); // "perro" | "gato"
   const name = sp.get("name") || "";
+
+  // Perros: altura objetivo (por talla). Default mediano 0.55 m
+  const defaultDogHeight = 0.55;
+  const targetHeightDog = parseFloat((sp.get("height_m") || `${defaultDogHeight}`).replace(",", "."));
+
+  // Gatos: 2 restricciones → largo efectivo y altura
+  const defaultCatLength = 0.50; // 50 cm (cabeza-cuerpo 46 + cola parcial)
+  const targetLengthCat = parseFloat((sp.get("length_m") || `${defaultCatLength}`).replace(",", "."));
+  const targetHeightCat = 0.24;  // 24 cm al hombro (puedes hacer param si quieres)
+
   const modelPath = useMemo(
     () => (typeParam === "gato" ? "/models/gato.glb" : "/models/perro.glb"),
     [typeParam]
@@ -33,8 +42,19 @@ function ArWorldInner() {
   const [status, setStatus] = useState("checking");
   const ref = useRef(null);
 
-  const glbHeight = GLB_HEIGHTS[typeParam] ?? 1.0;
-  const scale = Math.max(0.001, (targetHeight / glbHeight) || 1.0);
+  const scale = useMemo(() => {
+    if (typeParam === "gato") {
+      const baseLen = GLB_LENGTHS.gato || 1.0;
+      const baseHei = GLB_HEIGHTS.gato || 1.0;
+      const sLen = (targetLengthCat || defaultCatLength) / baseLen;
+      const sHei = (targetHeightCat) / baseHei;
+      return Math.max(0.001, Math.min(sLen, sHei));
+    } else {
+      const baseHei = GLB_HEIGHTS.perro || 1.0;
+      const h = (targetHeightDog || defaultDogHeight);
+      return Math.max(0.001, h / baseHei);
+    }
+  }, [typeParam, targetLengthCat, targetHeightCat, targetHeightDog]);
 
   useEffect(() => {
     const el = ref.current;
@@ -42,9 +62,8 @@ function ArWorldInner() {
 
     const onLoad = () => {
       try {
-        const s = scale;
         const model = el.model;
-        if (model?.scene) model.scene.scale.set(s, s, s);
+        if (model?.scene) model.scene.scale.set(scale, scale, scale);
       } catch (e) {
         console.warn("Escala scene-graph:", e);
       }
@@ -57,7 +76,6 @@ function ArWorldInner() {
 
     (async () => {
       try {
-        // Detecta si hay algún modo AR disponible (scene-viewer o webxr)
         const ok = await el.canActivateAR?.();
         setArCapable(!!ok);
         setStatus(ok ? "not-presenting" : "unsupported");
@@ -77,8 +95,7 @@ function ArWorldInner() {
     const el = ref.current;
     if (!el) return;
     try {
-      await el.activateAR();
-      // si falla, cae al catch
+      await el.activateAR(); // Android: Scene Viewer / WebXR
     } catch (e) {
       alert(
         "No se pudo abrir AR.\n\nTips Android:\n• Abre en Chrome (no navegador dentro de WhatsApp/Instagram).\n• Actualiza Google Chrome y Google Play Services for AR.\n• Asegúrate de que la página NO esté dentro de un iframe."
@@ -86,6 +103,12 @@ function ArWorldInner() {
       console.warn("activateAR() error:", e);
     }
   };
+
+  // Info para overlay
+  const infoLine =
+    typeParam === "gato"
+      ? `Largo objetivo: ${targetLengthCat.toFixed(2)} m • Altura máx: ${targetHeightCat.toFixed(2)} m • Scale: ${scale.toFixed(3)}`
+      : `Altura objetivo: ${targetHeightDog.toFixed(2)} m • Scale: ${scale.toFixed(3)}`;
 
   return (
     <>
@@ -103,7 +126,7 @@ function ArWorldInner() {
             ref={ref}
             src={modelPath}
             ar
-            // Solo Android: abre Scene Viewer o WebXR
+            // Solo Android
             // eslint-disable-next-line react/no-unknown-property
             ar-modes="scene-viewer webxr"
             // eslint-disable-next-line react/no-unknown-property
@@ -125,7 +148,7 @@ function ArWorldInner() {
         )}
       </div>
 
-      {/* Botón SIEMPRE visible que intenta abrir AR */}
+      {/* Botón AR siempre visible */}
       <div className="fixed bottom-20 left-0 right-0 z-50 grid place-items-center">
         <button
           onClick={launchAR}
@@ -134,17 +157,15 @@ function ArWorldInner() {
         >
           Ver en tu espacio (AR)
         </button>
-        <div className="mt-2 text-xs text-white/80">
-          Estado AR: {status}
-        </div>
+        <div className="mt-2 text-xs text-white/80">Estado AR: {status}</div>
       </div>
 
       {/* Overlay info */}
       <div className="fixed bottom-3 left-0 right-0 z-50">
         <div className="mx-auto max-w-lg rounded-2xl bg-white/85 backdrop-blur shadow p-3 text-sm text-gray-800">
-          <div>
-            <b>Tipo:</b> {typeParam} • <b>Altura objetivo:</b> {targetHeight.toFixed(2)} m • <b>Scale:</b> {scale.toFixed(3)} • <b>Modelo:</b>{" "}
-            {name || (typeParam === "gato" ? "Gato" : "Perro")}
+          <div className="space-y-1">
+            <div><b>Tipo:</b> {typeParam} • <b>Modelo:</b> {name || (typeParam === "gato" ? "Gato" : "Perro")}</div>
+            <div>{infoLine}</div>
           </div>
         </div>
       </div>
