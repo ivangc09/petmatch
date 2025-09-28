@@ -128,7 +128,7 @@ function ArWorldInner() {
             ar
             // Solo Android
             // eslint-disable-next-line react/no-unknown-property
-            ar-modes="scene-viewer webxr"
+            ar-modes="webxr scene-viewer"
             // eslint-disable-next-line react/no-unknown-property
             camera-controls
             // eslint-disable-next-line react/no-unknown-property
