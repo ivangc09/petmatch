@@ -4,19 +4,29 @@ import { useMemo, useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 
+export const dynamic = "force-dynamic"; 
+
 const GLB_HEIGHTS = {
     perro: 0.605,
     gato:  0.25,
 };
 
 export default function ARWorldPage() {
+    return (
+        <Suspense fallback={<div className="fixed inset-0 grid place-items-center text-white bg-black">Cargando…</div>}>
+            <ArWorldInner />
+        </Suspense>
+    );
+}
+
+function ArWorldInner() {
     const sp = useSearchParams();
 
     const typeParam = (sp.get("type") || "perro").toLowerCase();
     const defaultTarget = typeParam === "gato" ? 0.28 : 0.55;
     const targetHeight = parseFloat((sp.get("height_m") || `${defaultTarget}`).replace(",", "."));
     const name = sp.get("name") || "";
-    const usdzSrc = sp.get("usdz") || "";                                 
+    const usdzSrc = sp.get("usdz") || "";
     const modelPath = useMemo(
         () => (typeParam === "gato" ? "/models/gato.glb" : "/models/perro.glb"),
         [typeParam]
@@ -33,17 +43,16 @@ export default function ARWorldPage() {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
-
+        
         function onLoad() {
             try {
-                // Escala uniforme
                 const s = scale;
-                // scene-graph API
                 const model = el.model;
                 if (model && model.scene) {
                     model.scene.scale.set(s, s, s);
                 }
             } catch (e) {
+                
                 console.warn("No se pudo aplicar escala vía scene-graph:", e);
             }
         }
@@ -54,7 +63,7 @@ export default function ARWorldPage() {
 
     return (
         <>
-          {/* Carga model-viewer */}
+            {/* Carga model-viewer */}
             <Script
                 type="module"
                 src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
@@ -79,7 +88,6 @@ export default function ARWorldPage() {
                         ar-placement="floor"
                         touch-action="pan-y"
                     >
-                        {/* UI de AR en móvil */}
                         {/* eslint-disable-next-line react/no-unknown-property */}
                         <button slot="ar-button" className="px-4 py-2 rounded-xl bg-white/90 absolute bottom-6 left-1/2 -translate-x-1/2">
                             Ver en tu espacio (AR)
@@ -100,11 +108,12 @@ export default function ARWorldPage() {
             <div className="fixed bottom-3 left-0 right-0 z-50">
                 <div className="mx-auto max-w-lg rounded-2xl bg-white/85 backdrop-blur shadow p-3 text-sm text-gray-800">
                     <div>
-                        <b>Tipo:</b> {typeParam} • <b>Altura objetivo:</b> {targetHeight.toFixed(2)} m • <b>Scale aplicado:</b> {scale.toFixed(3)} • <b>Modelo:</b> {name || (typeParam === "gato" ? "Gato" : "Perro")}
+                        <b>Tipo:</b> {typeParam} • <b>Altura objetivo:</b> {targetHeight.toFixed(2)} m • <b>Scale aplicado:</b> {scale.toFixed(3)} • <b>Modelo:</b>{" "}
+                        {name || (typeParam === "gato" ? "Gato" : "Perro")}
                     </div>
                     {!!usdzSrc && <div className="mt-1">USDZ: {usdzSrc}</div>}
                 </div>
             </div>
         </>
     );
-}   
+}
