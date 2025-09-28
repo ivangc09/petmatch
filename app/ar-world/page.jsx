@@ -1,50 +1,4 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-
-export default function CamPreview() {
-  const videoRef = useRef(null);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        setMsg("Solicitando cámara…");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
-        const v = videoRef.current;
-        if (v) {
-          v.srcObject = stream;
-          await v.play(); // iOS requiere play() + playsInline + muted
-          setMsg("✅ Cámara funcionando");
-        }
-      } catch (e) {
-        setMsg(`❌ ${e.name}: ${e.message || "Permiso denegado/bloqueado"}`);
-      }
-    })();
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-[9999]">
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{ width:"100%", height:"100%", objectFit:"cover", background:"#000" }}
-      />
-      <div className="absolute bottom-4 left-0 right-0 mx-auto max-w-lg bg-white/90 rounded-xl p-2 text-sm text-gray-800 text-center">
-        {msg}
-      </div>
-    </div>
-  );
-}
-
-
-
-/*
-"use client";
 
 import { useMemo, useEffect, useRef, useState, Suspense } from "react";
 import Script from "next/script";
@@ -160,4 +114,3 @@ function ArWorldInner() {
         </>
     );
 }
-*/
