@@ -1,5 +1,5 @@
 "use client";
-import { FaPaw, FaBell, FaComments } from "react-icons/fa";
+import { FaPaw, FaBell, FaComments,FaBars, FaTimes } from "react-icons/fa";
 import Link from "next/link";
 import BotonCerrarSesion from "@/components/BotonCerrarSesión";
 import { useEffect, useState } from "react";
