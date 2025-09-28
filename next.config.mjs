@@ -1,14 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  async headers() {
+    async headers() {
     return [
       {
-        source: '/(.*)',
+        source: "/(.*)",
         headers: [
-          { key: 'Permissions-Policy', value: 'camera=(self)' },
+          { key: "Permissions-Policy", value: "camera=(self), xr-spatial-tracking=(self)" },
         ],
       },
     ];
   },
 };
-module.exports = nextConfig;
+
+export default nextConfig;
