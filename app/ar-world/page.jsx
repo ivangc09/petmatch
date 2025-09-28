@@ -1,4 +1,48 @@
 "use client";
+import { useState } from "react";
+
+export default function TestCam() {
+  const [msg, setMsg] = useState("");
+  const [streamed, setStreamed] = useState(false);
+
+  const probar = async () => {
+    setMsg("Solicitando cámara…");
+    try {
+      // environment = cámara trasera si está disponible
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      setStreamed(true);
+      setMsg("✅ Cámara concedida");
+      // Limpia la cámara después de 5s (solo para la prueba)
+      setTimeout(() => stream.getTracks().forEach(t => t.stop()), 5000);
+    } catch (e) {
+      // Errores típicos: NotAllowedError, NotFoundError, NotReadableError, SecurityError
+      setMsg(`❌ ${e.name}: ${e.message || "Permiso denegado o bloqueado"}`);
+    }
+  };
+
+  return (
+    <div className="fixed bottom-4 left-0 right-0 z-50 grid place-items-center">
+      <div className="max-w-lg w-[92vw] rounded-2xl bg-white/90 p-3 text-sm shadow">
+        <button
+          onClick={probar}
+          className="px-4 py-2 rounded-xl bg-[#7d9a75] text-white hover:bg-[#607859]"
+        >
+          Probar cámara
+        </button>
+        <div className="mt-2">{msg}</div>
+        {streamed && <div className="text-xs text-gray-500">Se liberará en 5s…</div>}
+      </div>
+    </div>
+  );
+}
+
+
+
+/*
+"use client";
 
 import { useMemo, useEffect, useRef, useState, Suspense } from "react";
 import Script from "next/script";
@@ -63,7 +107,6 @@ function ArWorldInner() {
 
     return (
         <>
-            {/* Carga model-viewer */}
             <Script
                 type="module"
                 src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
@@ -73,7 +116,6 @@ function ArWorldInner() {
 
             <div className="fixed inset-0 bg-black">
                 {ready ? (
-                  // eslint-disable-next-line react/no-unknown-property
                     <model-viewer
                         ref={ref}
                         src={modelPath}
@@ -88,11 +130,11 @@ function ArWorldInner() {
                         ar-placement="floor"
                         touch-action="pan-y"
                     >
-                        {/* eslint-disable-next-line react/no-unknown-property */}
+    
                         <button slot="ar-button" className="px-4 py-2 rounded-xl bg-white/90 absolute bottom-6 left-1/2 -translate-x-1/2">
                             Ver en tu espacio (AR)
                         </button>
-                        {/* eslint-disable-next-line react/no-unknown-property */}
+                        
                         <div slot="ar-prompt" className="absolute bottom-20 left-1/2 -translate-x-1/2 text-white text-sm">
                             Mueve el teléfono para detectar el piso
                         </div>
@@ -104,7 +146,6 @@ function ArWorldInner() {
                 )}
             </div>
             
-            {/* Overlay con datos */}
             <div className="fixed bottom-3 left-0 right-0 z-50">
                 <div className="mx-auto max-w-lg rounded-2xl bg-white/85 backdrop-blur shadow p-3 text-sm text-gray-800">
                     <div>
@@ -117,3 +158,4 @@ function ArWorldInner() {
         </>
     );
 }
+*/
