@@ -27,7 +27,7 @@ export default function PetProfile({ mascota }) {
     "mediano";
 
 
-  const arWorldHref = `/ar-world?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&size=${encodeURIComponent(tamaño)}`;
+  const arWorldHref = `/ar-world?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&size=${encodeURIComponent(tallaClave)}`;
 
   const mainImg = Array.isArray(fotos)
     ? (fotos[active] ?? "/placeholder-pet.jpg")
