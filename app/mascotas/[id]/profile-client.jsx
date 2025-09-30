@@ -15,12 +15,6 @@ export default function PetProfile({ mascota }) {
   const [token, setToken] = useState(null);
   const [showChat, setShowChat] = useState(false);
 
-  const DOG_TARGET_HEIGHTS = {
-  chico: 0.35,
-  mediano: 0.58,
-  grande: 0.75,
-  };
-
   const especieNorm = (especie || "").toLowerCase();
   const tallaNorm = (tamaño || "").toLowerCase();
 
@@ -33,12 +27,7 @@ export default function PetProfile({ mascota }) {
     "mediano";
 
 
-  const height_m = especieNorm === "gato" ? 0.28 : (DOG_TARGET_HEIGHTS[tallaClave] ?? 0.58);
-
-  const markerCm = 10;
-
-  const arHref = `/ar?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&marker=${markerCm}&height_m=${height_m.toFixed(2)}&ruler=1`;
-  const arWorldHref = `/ar-world?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&height_m=${height_m.toFixed(2)}`;
+  const arWorldHref = `/ar-world?type=${encodeURIComponent(especieNorm)}&name=${encodeURIComponent(nombre ?? "")}&size=${encodeURIComponent(tamaño)}`;
 
   const mainImg = Array.isArray(fotos)
     ? (fotos[active] ?? "/placeholder-pet.jpg")

@@ -34,7 +34,7 @@ function ArWorldInner() {
   const sp = useSearchParams();
 
   const typeParam = (sp.get("type") || "perro").toLowerCase(); 
-  const sizeParam = normalizeSize(sp.get("height_m")); 
+  const sizeParam = normalizeSize(sp.get("size")); 
   const name = sp.get("name") || "";
 
   const modelPath = useMemo(() => {
