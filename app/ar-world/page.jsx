@@ -1,13 +1,26 @@
 "use client";
 
-import { useMemo, useEffect, useRef, useState, Suspense } from "react";
+import { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-const GLB_HEIGHTS = { perro: 0.605, gato: 0.25 };
-const GLB_LENGTHS = { perro: 1.00, gato: 0.25 };
+const DOG_MODELS = {
+  chico: "/models/perro_chico.glb",
+  mediano: "/models/perro_mediano.glb",
+  grande: "/models/perro_grande.glb",
+};
+const CAT_MODEL = "/models/gato.glb";
+
+
+function normalizeSize(raw) {
+  const v = (raw || "").toLowerCase().trim();
+  if (["chico", "pequeño", "pequeno", "small", "s", "1"].includes(v)) return "chico";
+  if (["mediano", "medium", "m", "2"].includes(v)) return "mediano";
+  if (["grande", "large", "l", "3"].includes(v)) return "grande";
+  return "mediano";
+}
 
 export default function ARWorldPage() {
   return (
@@ -20,63 +33,30 @@ export default function ARWorldPage() {
 function ArWorldInner() {
   const sp = useSearchParams();
 
-  const typeParam = (sp.get("type") || "perro").toLowerCase(); // "perro" | "gato"
+  const typeParam = (sp.get("type") || "perro").toLowerCase(); 
+  const sizeParam = normalizeSize(sp.get("size")); 
   const name = sp.get("name") || "";
 
-  // Perros: altura objetivo (por talla). Default mediano 0.55 m
-  const defaultDogHeight = 0.55;
-  const targetHeightDog = parseFloat((sp.get("height_m") || `${defaultDogHeight}`).replace(",", "."));
-
-  // Gatos: 2 restricciones → largo efectivo y altura
-  const defaultCatLength = 0.50; // 50 cm (cabeza-cuerpo 46 + cola parcial)
-  const targetLengthCat = parseFloat((sp.get("length_m") || `${defaultCatLength}`).replace(",", "."));
-  const targetHeightCat = 0.24;  // 24 cm al hombro (puedes hacer param si quieres)
-
-  const modelPath = useMemo(
-    () => (typeParam === "gato" ? "/models/gato.glb" : "/models/perro.glb"),
-    [typeParam]
-  );
+  const modelPath = useMemo(() => {
+    if (typeParam === "gato") return CAT_MODEL;
+    return DOG_MODELS[sizeParam] || DOG_MODELS.mediano;
+  }, [typeParam, sizeParam]);
 
   const [ready, setReady] = useState(false);
   const [arCapable, setArCapable] = useState(false);
   const [status, setStatus] = useState("checking");
   const ref = useRef(null);
 
-  const scale = useMemo(() => {
-    if (typeParam === "gato") {
-      const baseLen = GLB_LENGTHS.gato || 1.0;
-      const baseHei = GLB_HEIGHTS.gato || 1.0;
-      const sLen = (targetLengthCat || defaultCatLength) / baseLen;
-      const sHei = (targetHeightCat) / baseHei;
-      return Math.max(0.001, Math.min(sLen, sHei));
-    } else {
-      const baseHei = GLB_HEIGHTS.perro || 1.0;
-      const h = (targetHeightDog || defaultDogHeight);
-      return Math.max(0.001, h / baseHei);
-    }
-  }, [typeParam, targetLengthCat, targetHeightCat, targetHeightDog]);
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const onLoad = () => {
-      try {
-        const model = el.model;
-        if (model?.scene) model.scene.scale.set(scale, scale, scale);
-      } catch (e) {
-        console.warn("Escala scene-graph:", e);
-      }
-    };
-
-    const onArStatus = (e) => setStatus(e.detail?.status || "unknown");
-
-    el.addEventListener("load", onLoad);
+    const onArStatus = (e) => setStatus((e.detail && e.detail.status) || "unknown");
     el.addEventListener("ar-status", onArStatus);
 
     (async () => {
       try {
-        const ok = await el.canActivateAR?.();
+        const ok = await (el.canActivateAR && el.canActivateAR());
         setArCapable(!!ok);
         setStatus(ok ? "not-presenting" : "unsupported");
       } catch {
@@ -86,16 +66,15 @@ function ArWorldInner() {
     })();
 
     return () => {
-      el.removeEventListener("load", onLoad);
       el.removeEventListener("ar-status", onArStatus);
     };
-  }, [scale]);
+  }, [modelPath]);
 
   const launchAR = async () => {
     const el = ref.current;
     if (!el) return;
     try {
-      await el.activateAR(); // Android: Scene Viewer / WebXR
+      await el.activateAR();
     } catch (e) {
       alert(
         "No se pudo abrir AR.\n\nTips Android:\n• Abre en Chrome (no navegador dentro de WhatsApp/Instagram).\n• Actualiza Google Chrome y Google Play Services for AR.\n• Asegúrate de que la página NO esté dentro de un iframe."
@@ -103,12 +82,6 @@ function ArWorldInner() {
       console.warn("activateAR() error:", e);
     }
   };
-
-  // Info para overlay
-  const infoLine =
-    typeParam === "gato"
-      ? `Largo objetivo: ${targetLengthCat.toFixed(2)} m • Altura máx: ${targetHeightCat.toFixed(2)} m • Scale: ${scale.toFixed(3)}`
-      : `Altura objetivo: ${targetHeightDog.toFixed(2)} m • Scale: ${scale.toFixed(3)}`;
 
   return (
     <>
@@ -126,7 +99,6 @@ function ArWorldInner() {
             ref={ref}
             src={modelPath}
             ar
-            // Solo Android
             // eslint-disable-next-line react/no-unknown-property
             ar-modes="webxr scene-viewer"
             // eslint-disable-next-line react/no-unknown-property
@@ -148,7 +120,7 @@ function ArWorldInner() {
         )}
       </div>
 
-      {/* Botón AR siempre visible */}
+      {/* Botón AR */}
       <div className="fixed bottom-20 left-0 right-0 z-50 grid place-items-center">
         <button
           onClick={launchAR}
@@ -164,8 +136,21 @@ function ArWorldInner() {
       <div className="fixed bottom-3 left-0 right-0 z-50">
         <div className="mx-auto max-w-lg rounded-2xl bg-white/85 backdrop-blur shadow p-3 text-sm text-gray-800">
           <div className="space-y-1">
-            <div><b>Tipo:</b> {typeParam} • <b>Modelo:</b> {name || (typeParam === "gato" ? "Gato" : "Perro")}</div>
-            <div>{infoLine}</div>
+            <div>
+              <b>Tipo:</b> {typeParam}
+              {typeParam === "perro" && (
+                <>
+                  {" "}
+                  • <b>Tamaño:</b> {sizeParam}
+                </>
+              )}{" "}
+              • <b>Modelo:</b> {name || (typeParam === "perro" ? `perro-${sizeParam}` : "gato")}
+            </div>
+            <div>
+              {typeParam === "gato"
+                ? "Modelo de gato fijo (escala 1.0 del GLB)."
+                : "Modelo de perro por talla (escala 1.0 del GLB)."}
+            </div>
           </div>
         </div>
       </div>
