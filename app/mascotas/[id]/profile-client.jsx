@@ -139,7 +139,7 @@ export default function PetProfile({ mascota }) {
                       target="_blank"
                       className="inline-flex items-center px-4 py-2 rounded-2xl bg-[#7d9a75] text-white hover:bg-[#607859]"
                   >
-                      Ver en tu espacio (AR beta)
+                      Ver en tu espacio (Solo Android)
                   </Link>
                 </div>
               </div>
