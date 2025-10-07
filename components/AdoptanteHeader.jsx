@@ -88,7 +88,7 @@ export default function AdoptanteHeader() {
 
               <LinkItem href="/adoptante">Inicio</LinkItem>
               <LinkItem href="/adoptante#mascotas-list">Encontrar mascotas</LinkItem>
-              <LinkItem href="/como-adoptar">¿Cómo adoptar?</LinkItem>
+              <LinkItem href="/mascotas/mascota-perfecta">Mascota Perfecta</LinkItem>
               <LinkItem href="/mi-perfil">Mi Perfil</LinkItem>
               <div className="px-3">
                 <BotonCerrarSesion className="text-[#7d8181] hover:text-[#D3764C]" />
