@@ -9,31 +9,41 @@ import Hero from '@/components/Hero';
 
 export default function VeterinarioDashboard() {
   const router = useRouter();
-  const [items, setItems] = useState([]);      // antes "mascotas"
-  const [total, setTotal] = useState(0);       // nuevo
-  const [page, setPage] = useState(1);         // nuevo
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const pageSize = 6;
 
-  const [tipoUsuario, setTipoUsuario] = useState("");
-  const [token, setToken] = useState("");
+  const [query, setQuery] = useState({});
+  const [tipoUsuario, setTipoUsuario] = useState('');
+  const [token, setToken] = useState('');
   const [error, setError] = useState(null);
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
   useEffect(() => {
-    const t = localStorage.getItem("token");
-    const tipo = localStorage.getItem("tipo_usuario");
-    if (!t || tipo !== "veterinario") {
-      router.push("/login");
+    const t = localStorage.getItem('token');
+    const tipo = localStorage.getItem('tipo_usuario');
+    if (!t || tipo !== 'veterinario') {
+      router.push('/login');
       return;
     }
     setTipoUsuario(tipo);
     setToken(t);
-    fetchPage(1, t);
+    fetchPage(1, t, query);
   }, [router]);
 
-  async function fetchPage(p, t = token) {
+  useEffect(() => {
+    if(error) router.push("/login");
+  },[error,router]);
+
+  async function fetchPage(p = 1, t = token, q = query) {
     try {
-      const res = await fetch(`${API_BASE}/api/mascotas/mis-mascotas/?page=${p}`, {
+      const usp = new URLSearchParams({ page: String(p) });
+      Object.entries(q || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") usp.set(k, String(v));
+      });
+
+      const res = await fetch(`${API_BASE}/api/mascotas/mis-mascotas/?${usp.toString()}`, {
         headers: { Authorization: `Bearer ${t}` },
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -41,12 +51,15 @@ export default function VeterinarioDashboard() {
       setItems(data.results || []);
       setTotal(data.count || 0);
       setPage(p);
-    } catch (e) {
-      setError("Error al obtener mascotas");
+    } catch {
+      setError('Error al obtener mascotas');
     }
   }
 
-  if (error) router.push("/login");
+  const handleSearch = (q) => {
+    setQuery(q || {});
+    fetchPage(1, token, q || {});
+  };
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -58,13 +71,14 @@ export default function VeterinarioDashboard() {
         apiBase={API_BASE}
         endpointPath="/api/mascotas/mis-mascotas/"
         token={token}
-        onResults={() => fetchPage(1)}   // reset a la primera página
+        onSearch={handleSearch}
         titulo="Organiza a tus Pacientes"
         subtitulo="Peludos"
         texto="Gestiona y encuentra rápidamente a tus pacientes peludos. Cada perfil contiene información esencial para brindarles el mejor cuidado."
+        tipoUsuario={tipoUsuario}
       />
 
-      <SeccionMedia cantidadMascotas={total} texto={"listas para adoptar"} />
+      <SeccionMedia cantidadMascotas={total} texto={'listas para adoptar'} />
 
       <div className="flex gap-4 justify-center flex-wrap bg-[#f6f5f3] pb-6">
         {items.map((mascota) => (
@@ -80,9 +94,8 @@ export default function VeterinarioDashboard() {
             onClick={() => fetchPage(page - 1)}
             disabled={page === 1}
             className={`px-3 py-2 rounded-md font-medium ${
-              page === 1
-                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                : 'bg-[#7d9a75] text-white hover:bg-[#607859]'
+              page === 1 ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                          : 'bg-[#7d9a75] text-white hover:bg-[#607859]'
             }`}
           >
             ← Anterior
@@ -93,9 +106,8 @@ export default function VeterinarioDashboard() {
               key={i}
               onClick={() => fetchPage(i + 1)}
               className={`px-3 py-2 rounded-md font-medium ${
-                page === i + 1
-                  ? 'bg-[#7d9a75] text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                page === i + 1 ? 'bg-[#7d9a75] text-white'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
               {i + 1}
@@ -106,9 +118,8 @@ export default function VeterinarioDashboard() {
             onClick={() => fetchPage(page + 1)}
             disabled={page === totalPages}
             className={`px-3 py-2 rounded-md font-medium ${
-              page === totalPages
-                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                : 'bg-[#7d9a75] text-white hover:bg-[#607859]'
+              page === totalPages ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                                  : 'bg-[#7d9a75] text-white hover:bg-[#607859]'
             }`}
           >
             Siguiente →

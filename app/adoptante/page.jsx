@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import AdoptanteHeader from "@/components/AdoptanteHeader";
 import Hero from "@/components/Hero";
 import PetCard from "@/components/PetCard";
@@ -10,11 +10,12 @@ import Chatbot from "@/components/Chatbot";
 
 export default function AdoptanteDashboard() {
   const router = useRouter();
-  const [items, setItems] = useState([]);       // antes "mascotas"
-  const [total, setTotal] = useState(0);        // nuevo: count del backend
-  const [page, setPage] = useState(1);          // nuevo: página actual
-  const pageSize = 6;                           // fijo, igual que en DRF
+  const [items, setItems] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const pageSize = 6;
 
+  const [query, setQuery] = useState({});
   const [tipoUsuario, setTipoUsuario] = useState("");
   const [token, setToken] = useState("");
   const [error, setError] = useState(null);
@@ -30,12 +31,23 @@ export default function AdoptanteDashboard() {
     }
     setTipoUsuario(tipo);
     setToken(t);
-    fetchPage(1, t);
+    fetchPage(1, t, query);
   }, [router]);
 
-  async function fetchPage(p, t = token) {
+  useEffect(() => {
+    if(error) router.push("/login");
+    console.log(error);
+  },[error,router]);
+
+  async function fetchPage(p = 1, t = token, q = query) {
     try {
-      const res = await fetch(`${API_BASE}/api/mascotas/ver-mascotas/?page=${p}`, {
+      // 🔹 Construir URL con page + filtros
+      const usp = new URLSearchParams({ page: String(p) });
+      Object.entries(q || {}).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") usp.set(k, String(v));
+      });
+
+      const res = await fetch(`${API_BASE}/api/mascotas/ver-mascotas/?${usp.toString()}`, {
         headers: { Authorization: `Bearer ${t}` },
       });
       if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -43,12 +55,17 @@ export default function AdoptanteDashboard() {
       setItems(data.results || []);
       setTotal(data.count || 0);
       setPage(p);
-    } catch (e) {
+    } catch {
       setError("Error al obtener mascotas");
     }
   }
 
-  if (error) router.push("/login");
+  // Cuando Hero cambie filtros/búsqueda
+  const handleSearch = (q) => {
+    setQuery(q || {});
+    fetchPage(1, token, q || {});
+  };
+
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -56,15 +73,15 @@ export default function AdoptanteDashboard() {
     <main>
       <AdoptanteHeader />
 
-      {/* Si tu Hero hace búsquedas, haz que resetee a página 1 */}
       <Hero
         apiBase={API_BASE}
         endpointPath="/api/mascotas/ver-mascotas/"
         token={token}
-        onResults={() => fetchPage(1)}  // fuerza recarga desde p=1
+        onSearch={handleSearch}
         titulo="Encuentra a tu Perfecta"
         subtitulo="Compañia"
         texto="Descubre mascotas increíbles que esperan su hogar para siempre. Cada perfil cuenta una historia única de resiliencia, amor y esperanza para un nuevo comienzo."
+        tipoUsuario={tipoUsuario}
       />
 
       <SeccionMedia cantidadMascotas={total} texto={"listas para adoptar"} />
