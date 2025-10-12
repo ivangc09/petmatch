@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import AdoptanteHeader from "@/components/AdoptanteHeader";
 import Hero from "@/components/Hero";
 import PetCard from "@/components/PetCard";
@@ -21,6 +21,7 @@ export default function AdoptanteDashboard() {
   const [error, setError] = useState(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
+  const prevQueryJson = useRef(JSON.stringify({}));
 
   useEffect(() => {
     const t = localStorage.getItem("token");
@@ -32,7 +33,7 @@ export default function AdoptanteDashboard() {
     setTipoUsuario(tipo);
     setToken(t);
     fetchPage(1, t, query);
-  }, [router]);
+}, [router]);
 
   useEffect(() => {
     if(error) router.push("/login");
@@ -62,9 +63,17 @@ export default function AdoptanteDashboard() {
 
   // Cuando Hero cambie filtros/búsqueda
   const handleSearch = (q) => {
-    setQuery(q || {});
-    fetchPage(1, token, q || {});
-  };
+    const next = q || {};
+    const nextJson = JSON.stringify(next);
+    if (nextJson === prevQueryJson.current) {
+      return;
+    }
+    prevQueryJson.current = nextJson;
+    setQuery(next);
+    if (token) {
+      fetchPage(1, token, next);
+    }
+};
 
 
   const totalPages = Math.ceil(total / pageSize);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/VeterinarioHeader';
 import PetCard from '../../components/PetCard';
@@ -18,6 +18,7 @@ export default function VeterinarioDashboard() {
   const [tipoUsuario, setTipoUsuario] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState(null);
+  const prevQueryJson = useRef(JSON.stringify({}));
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
   useEffect(() => {
@@ -57,10 +58,15 @@ export default function VeterinarioDashboard() {
   }
 
   const handleSearch = (q) => {
-    setQuery(q || {});
-    fetchPage(1, token, q || {});
-  };
-
+    const next = q || {};
+    const nextJson = JSON.stringify(next);
+    if (nextJson === prevQueryJson.current) return;
+    prevQueryJson.current = nextJson;
+    setQuery(next);
+    if (token) {
+      fetchPage(1, token, next);
+    }
+};
   const totalPages = Math.ceil(total / pageSize);
 
   return (

@@ -1,8 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import { FaFilter } from "react-icons/fa";
-import { BiReset } from "react-icons/bi";
-
 
 export default function Hero({
   onSearch = () => {},
