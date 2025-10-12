@@ -7,7 +7,7 @@ function Botones({ tipoUsuario, idMascota }) {
 
     if (tipoUsuario === "adoptante") {
         return (
-            <div className="flex justify-end mt-4 gap-4">
+            <div className="flex justify-end mt-4 gap-4 mb-3">
                 <div>
                     <Link href={`/mascotas/${idMascota}`}
                     className="mt-6 bg-[#7d9a75] text-white px-6 py-3 rounded-md hover:bg-[#607859] transition-colors">Me interesa</Link>
@@ -105,13 +105,13 @@ export default function PetCard({ mascota, tipoUsuario }) {
 
                 </div>
 
-                <div className="flex flex-wrap gap-4 m-4 items-center justify-center">
+                <div className="mt-4 mb-2 rounded-xl px-4 py-3 flex flex-wrap justify-center gap-2">
                     <Chip color="#7d9a76">{humor || "-"}</Chip>
                     <Chip color="#d47451">{conviveOtrasMascotas || "-"}</Chip>
                     <Chip color="#d47451">{energia || "-"}</Chip>
                     <Chip color="#7d9a76">{conviveNinos || "-"}</Chip>
-
                 </div>
+
                 <Botones tipoUsuario={tipoUsuario} idMascota={mascota.id} />     
             </div>
         </div>
@@ -119,11 +119,13 @@ export default function PetCard({ mascota, tipoUsuario }) {
 
 }
 
-function Chip({ children, color}) {
-    return(
-        <span className={`px-3 py-1 rounded-full text-sm font-medium border text-white`}
-            style={{ backgroundColor: color }}>
+function Chip({ children, color }) {
+    return (
+        <span
+            className="px-3 py-1 text-sm font-medium text-white rounded-full shadow-sm transition-transform hover:scale-105"
+            style={{ backgroundColor: color, minWidth: "fit-content", textAlign: "center" }}
+        >
             {children}
         </span>
-    )
+    );
 }

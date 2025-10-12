@@ -40,7 +40,7 @@ export function useNuevaMascota() {
         raza: "",
         edad: "",
         tamaño: "",
-        sexo: "",
+        sexo: "Macho",
         descripcion: "",
         es_jugueton: false,
         es_tranquilo: true,
