@@ -111,11 +111,14 @@ export default function Page() {
 			const pretty = EXCEPTIONS[breedName]
 		
       		// Mostrar la raza detectada
-			setMessages((prev) => [
-				...prev,
-			  	{ id: crypto.randomUUID(), role: "bot", text: `Parece que este amiguito es un **${pretty}**.`, ts: Date.now() },
-			]);
-		
+
+			if (pretty !== undefined) {
+				setMessages((prev) => [
+					...prev,
+					{ id: crypto.randomUUID(), role: "bot", text: `He identificado la raza como **${pretty}**.`, ts: Date.now() },
+				]);
+			}
+			
       		// 3) Llamar chatbot con “info_general: RAZA”
 			const prompt = `info_general: ${breedName}`;
 			const chatRes = await fetch(CHATBOT_URL, {
