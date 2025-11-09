@@ -39,7 +39,7 @@ export function useNuevaMascota() {
         especie: "perro",
         raza: "",
         edad: 0,
-        tamaño: "",
+        tamaño: "mediano",
         sexo: "macho",
         descripcion: "",
         es_jugueton: false,
