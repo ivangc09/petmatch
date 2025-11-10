@@ -47,7 +47,6 @@ export default function RegistroPage() {
     setError(null);
 
     try {
-        console.log("SIGNUP payload >>>", formData)
         const response = await fetch(`${API_BASE}/api/auth/registration/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -93,7 +92,7 @@ export default function RegistroPage() {
 
     return (
         <div className="shadow-lg flex flex-col md:flex-row w-full h-screen overflow-hidden font-['Poppins']">
-            <div className="bg-[#faf6f3] md:w-1/3 p-10 flex flex-col justify-center">
+            <div className="bg-[#faf6f3] md:w-1/3 h-screen p-10 flex flex-col justify-center">
                 <h1 className="text-5xl font-bold text-[#2C2C2C] mb-4 font-['Dancing_Script'] text-center">
                     Registro de cuenta
                 </h1>

@@ -47,7 +47,7 @@ export default function LoginPage() {
                     <img src="/login-fondo.webp" alt="Adopta una mascota" loading="lazy" className="h-full w-full object-cover"/>
                 </div>
 
-                <div className="bg-[#faf6f3] md:w-1/3 p-10 flex flex-col justify-center">
+                <div className="bg-[#faf6f3] md:w-1/3 h-screen p-10 flex flex-col justify-center">
                     <h1 className="text-5xl font-bold text-[#2C2C2C] mb-2 font-['Dancing_Script'] text-center">PetMatch</h1>
                     <p className="text-[#555] mb-6 text-center font-['Poppins']">El lugar para conocer a tu nuevo amigo</p>
 
